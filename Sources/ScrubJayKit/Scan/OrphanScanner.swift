@@ -1,0 +1,63 @@
+import Foundation
+
+/// Finds leftovers of apps that are no longer installed.
+///
+/// Only entries whose names are bundle identifiers qualify: a name-keyed
+/// directory cannot be safely attributed to "no app at all". Entries claimed
+/// by any installed app, and everything under `com.apple.`, are excluded.
+/// Nothing an orphan scan reports is ever preselected.
+public struct OrphanScanner: Sendable {
+  public let roots: [SearchRoot]
+
+  public init(roots: [SearchRoot]) {
+    self.roots = roots
+  }
+
+  /// Group Containers are excluded: their team-ID-prefixed names cannot be
+  /// matched to bundle identifiers with confidence.
+  public static func forCurrentUser() -> OrphanScanner {
+    let roots = LeftoverCatalog.userRoots(home: FileManager.default.homeDirectoryForCurrentUser)
+      .filter { $0.kind != .groupContainers }
+    return OrphanScanner(roots: roots)
+  }
+
+  /// Scan for entries no installed app claims.
+  ///
+  /// - Returns: items at `medium` when no installed app shares the entry's
+  ///   vendor, `low` when vendor siblings are still installed (their shared
+  ///   tooling often lives under names like `com.vendor.updater`).
+  public func scan(installed: [AppIdentity], computeSizes: Bool = true) -> [LeftoverItem] {
+    let fm = FileManager.default
+    var items: [LeftoverItem] = []
+    for root in roots {
+      guard
+        let entries = try? fm.contentsOfDirectory(
+          at: root.url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+      else { continue }
+      for entry in entries {
+        let name = entry.lastPathComponent
+        guard let stem = Matcher.bundleIDStem(of: name), !stem.hasPrefix("com.apple.") else {
+          continue
+        }
+        guard !installed.contains(where: { Matcher.match(entryName: name, identity: $0) != nil })
+        else { continue }
+        // Wrapped names like `bugsnag-shared-com.ticktick.task.mac` embed an
+        // installed app's bundle ID — that app still owns them.
+        guard !installed.contains(where: { stem.contains($0.bundleID.lowercased()) })
+        else { continue }
+
+        let vendorPrefix = stem.split(separator: ".").prefix(2).joined(separator: ".") + "."
+        let vendorStillPresent = installed.contains {
+          $0.bundleID.lowercased().hasPrefix(vendorPrefix)
+        }
+        let size = computeSizes ? FileSize.allocatedSize(at: entry) : nil
+        items.append(
+          LeftoverItem(
+            url: entry, kind: root.kind,
+            confidence: vendorStillPresent ? .low : .medium,
+            sizeBytes: size))
+      }
+    }
+    return items.sorted { ($0.sizeBytes ?? 0) > ($1.sizeBytes ?? 0) }
+  }
+}

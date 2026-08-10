@@ -113,6 +113,29 @@ public enum Matcher {
     return String(parts[1]).lowercased()
   }
 
+  /// The reverse-DNS stem of a file name, or nil when the name does not look
+  /// like a bundle identifier. `com.foo.Bar.plist` → `com.foo.bar`;
+  /// `Google Chrome` → nil.
+  public static func bundleIDStem(of entryName: String) -> String? {
+    var stem = entryName.lowercased()
+    var stripped = true
+    while stripped {
+      stripped = false
+      for suffix in knownSuffixes.sorted(by: { $0.count > $1.count })
+      where stem.hasSuffix("." + suffix) {
+        stem = String(stem.dropLast(suffix.count + 1))
+        stripped = true
+      }
+    }
+    let labels = stem.split(separator: ".", omittingEmptySubsequences: false)
+    guard labels.count >= 3, labels.allSatisfy({ !$0.isEmpty }) else { return nil }
+    let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_"))
+    guard
+      labels.allSatisfy({ $0.unicodeScalars.allSatisfy(allowed.contains) })
+    else { return nil }
+    return stem
+  }
+
   static func normalize(_ name: String) -> String {
     // Strip a trailing file extension only when the base still looks like a
     // name (avoids eating "2.0" style version suffixes in directory names).
