@@ -4,7 +4,17 @@ Uninstall Mac apps cleanly.
 
 ScrubJay removes an application together with the files it leaves behind — caches, preferences, containers, saved state, logs, launch agents. Every removal goes to the Trash, so nothing is lost for good.
 
-**Status: early development.** The scanning engine and a CLI exist; the app is not built yet. Not ready for daily use.
+**Status: early development.** Not ready for daily use.
+
+## Build the app
+
+```
+brew install xcodegen
+xcodegen
+xcodebuild -project ScrubJay.xcodeproj -scheme ScrubJay build
+```
+
+Pick an app in the sidebar to see everything it would leave behind, grouped by how confident ScrubJay is. Items are preselected by confidence — loosely matched files never are. Removal moves files to the Trash and is blocked while the app is running.
 
 ## Try the CLI
 

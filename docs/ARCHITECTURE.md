@@ -11,7 +11,7 @@
 ```
 ScrubJayKit   engine: inventory, scanning, matching, removal
 ScrubJayCLI   thin front end for development and power users
-ScrubJay.app  SwiftUI front end (planned)
+ScrubJay.app  SwiftUI front end (App/, XcodeGen project)
 ```
 
 `ScrubJayKit` is deliberately synchronous and value-typed; front ends own their threading.
@@ -49,9 +49,8 @@ Two hazards observed on real machines are handled in the scanner, both biased to
 
 ## Roadmap
 
-1. Engine hardening: running-app detection.
-2. `remove` in the CLI: explicit confirmation, trash-only, prints what went where.
-3. SwiftUI app (XcodeGen project), drag-and-drop and list UI.
+1. `remove` in the CLI: explicit confirmation, trash-only, prints what went where.
+2. App polish: app icons, drag-and-drop onto the window, low-confidence disclosure.
 4. Login items and launch agents (`SMAppService` + LaunchAgents plists).
 5. Homebrew awareness: detect cask-managed apps, delegate to `brew uninstall --cask`.
 6. Developer leftovers: caches for npm/pip/cargo, Xcode DerivedData, simulators.
