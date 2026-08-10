@@ -72,6 +72,7 @@ final class AppState {
   var devCaches: [SelectableCache]?
   var orphans: [SelectableItem]?
   var isScanning = false
+  var isRemoving = false
   var removalError: String?
   /// Shown on the placeholder after a completed uninstall.
   var lastRemovalNote: String?
@@ -122,13 +123,18 @@ final class AppState {
     caskAppNames = Set(
       await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
     refreshRunningApps()
+    // Sizes are cosmetic — compute them without holding up whoever called.
     let snapshot = apps
-    appSizes = await Task.detached {
-      Dictionary(
-        uniqueKeysWithValues: snapshot.map {
-          ($0.bundleID, FileSize.allocatedSize(at: $0.bundleURL) ?? 0)
-        })
-    }.value
+    Task {
+      let sizes = await Task.detached {
+        Dictionary(
+          uniqueKeysWithValues: snapshot.map {
+            ($0.bundleID, FileSize.allocatedSize(at: $0.bundleURL) ?? 0)
+          })
+      }.value
+      let installed = Set(self.apps.map(\.bundleID))
+      self.appSizes = sizes.filter { installed.contains($0.key) }
+    }
   }
 
   func refreshRunningApps() {
@@ -208,6 +214,8 @@ final class AppState {
     let plannedSize = current.selectedSize
     var bundleRemoved = false
     var failures: [String] = []
+    isRemoving = true
+    defer { isRemoving = false }
 
     // System-domain items go through the privileged helper.
     let systemEntries = current.items.filter {

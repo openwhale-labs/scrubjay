@@ -288,9 +288,14 @@ struct DetailView: View {
         .foregroundStyle(.secondary)
         .padding(.leading, 8)
       Spacer()
+      if state.isRemoving {
+        ProgressView().controlSize(.small).padding(.trailing, 4)
+      }
       Button("Move to Trash…") { confirming = true }
         .keyboardShortcut(.defaultAction)
-        .disabled(scan.selectedCount == 0 || (scan.appBundleSelected && scan.isAppRunning))
+        .disabled(
+          state.isRemoving || scan.selectedCount == 0
+            || (scan.appBundleSelected && scan.isAppRunning))
     }
     .padding()
     .confirmationDialog(
