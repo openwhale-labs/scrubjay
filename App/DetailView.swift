@@ -87,10 +87,8 @@ struct DetailView: View {
       } else {
         Text("System-level items need the ScrubJay helper (\(state.helper.statusDescription)).")
         Button("Enable…") {
-          do {
-            try state.helper.register()
-          } catch {
-            state.removalError = "Helper registration failed: \(error.localizedDescription)"
+          if let message = state.helper.register() {
+            state.removalError = "Helper registration failed: \(message)"
           }
         }
       }
@@ -250,7 +248,7 @@ struct DetailView: View {
       // (medium and above), "all" really means everything including
       // loosely matched items.
       Toggle(
-        "Select recommended",
+        "Recommended",
         isOn: .init(
           get: {
             guard let scan = state.scan else { return false }
@@ -269,7 +267,7 @@ struct DetailView: View {
       .toggleStyle(.checkbox)
       .help("The app and every confidently matched leftover — the same set that starts selected.")
       Toggle(
-        "Select all",
+        "All",
         isOn: .init(
           get: {
             guard let scan = state.scan else { return false }

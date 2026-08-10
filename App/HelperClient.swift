@@ -25,13 +25,28 @@ final class HelperClient {
   }
 
   /// Register the daemon. macOS asks the user to approve it in
-  /// System Settings › Login Items on first registration.
-  func register() throws {
-    try service.register()
+  /// System Settings › Login Items on first registration; while approval is
+  /// pending, `register()` throws "Operation not permitted" — that is part
+  /// of the normal flow, not a failure.
+  ///
+  /// - Returns: an error message only for real failures.
+  func register() -> String? {
+    let thrown: (any Error)?
+    do {
+      try service.register()
+      thrown = nil
+    } catch {
+      thrown = error
+    }
     refreshStatus()
     if status == .requiresApproval {
       SMAppService.openSystemSettingsLoginItems()
+      return nil
     }
+    if status == .enabled {
+      return nil
+    }
+    return thrown?.localizedDescription
   }
 
   func unregister() throws {

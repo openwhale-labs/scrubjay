@@ -49,6 +49,18 @@ final class AppState {
 
   let helper = HelperClient()
 
+  init() {
+    // Coming back from System Settings after approving the helper should
+    // reflect immediately.
+    NotificationCenter.default.addObserver(
+      forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.helper.refreshStatus()
+      }
+    }
+  }
+
   var apps: [InstalledApp] = []
   var query = ""
   var selectedBundleID: String?
