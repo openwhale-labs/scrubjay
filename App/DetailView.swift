@@ -33,18 +33,25 @@ struct DetailView: View {
   // MARK: Header
 
   private func header(_ scan: ScanResult) -> some View {
-    HStack(alignment: .top) {
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 8) {
-          Text(scan.app.name).font(.title2.bold())
-          if let version = scan.app.version {
-            Text(version).foregroundStyle(.secondary)
-          }
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(spacing: 8) {
+        Text(scan.app.name).font(.title2.bold())
+        if let version = scan.app.version {
+          Text(version).foregroundStyle(.secondary)
         }
-        Text(scan.app.bundleID)
-          .font(.callout)
-          .foregroundStyle(.secondary)
-        if scan.isAppRunning {
+        Spacer()
+        Picker("", selection: $sortBySize) {
+          Text("Confidence").tag(false)
+          Text("Size").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+      }
+      Text(scan.app.bundleID)
+        .font(.callout)
+        .foregroundStyle(.secondary)
+      if scan.isAppRunning {
           Label(
             "This app is running. Quit it before uninstalling.",
             systemImage: "exclamationmark.triangle"
@@ -64,16 +71,8 @@ struct DetailView: View {
         if let cask = scan.caskToken {
           brewHint(cask)
         }
-      }
-      Spacer()
-      Picker("", selection: $sortBySize) {
-        Text("Confidence").tag(false)
-        Text("Size").tag(true)
-      }
-      .pickerStyle(.segmented)
-      .labelsHidden()
-      .fixedSize()
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding()
   }
 
