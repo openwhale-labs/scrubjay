@@ -14,32 +14,107 @@ public struct LeftoverScanner: Sendable {
       roots: LeftoverCatalog.userRoots(home: FileManager.default.homeDirectoryForCurrentUser))
   }
 
+  /// Root kinds where vendors commonly nest per-app data one level down,
+  /// e.g. `Application Support/Google/Chrome`.
+  private static let vendorNestedKinds: Set<LeftoverKind> = [
+    .applicationSupport, .caches, .logs,
+  ]
+
   /// Scan all roots for entries matching the app identity.
   ///
-  /// Only the top level of each root is examined: leftover artifacts are
-  /// keyed by bundle identifier or app name at the root level, and matching
-  /// deeper would trade precision for noise.
-  public func scan(for identity: AppIdentity, computeSizes: Bool = true) -> [LeftoverItem] {
+  /// - Parameters:
+  ///   - identity: the app being uninstalled.
+  ///   - others: identities of all other installed apps. Any entry that a
+  ///     longer bundle identifier claims (Chrome Beta over Chrome) is
+  ///     attributed to that app and excluded here. Deliberately biased
+  ///     toward missing a file over deleting a wrong one.
+  ///   - computeSizes: compute allocated sizes for results.
+  public func scan(
+    for identity: AppIdentity,
+    amongInstalled others: [AppIdentity] = [],
+    computeSizes: Bool = true
+  ) -> [LeftoverItem] {
     let fm = FileManager.default
+    let rivals = others.filter { $0.bundleID.lowercased() != identity.bundleID.lowercased() }
     var items: [LeftoverItem] = []
+
+    func append(_ url: URL, _ kind: LeftoverKind, _ confidence: Confidence) {
+      let size = computeSizes ? FileSize.allocatedSize(at: url) : nil
+      items.append(LeftoverItem(url: url, kind: kind, confidence: confidence, sizeBytes: size))
+    }
+
     for root in roots {
       guard
         let entries = try? fm.contentsOfDirectory(
-          at: root.url, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+          at: root.url, includingPropertiesForKeys: [.isDirectoryKey],
+          options: [.skipsHiddenFiles])
       else {
         continue
       }
       for entry in entries {
-        guard let confidence = Matcher.match(entryName: entry.lastPathComponent, identity: identity)
-        else { continue }
-        let size = computeSizes ? FileSize.allocatedSize(at: entry) : nil
-        items.append(
-          LeftoverItem(url: entry, kind: root.kind, confidence: confidence, sizeBytes: size))
+        let name = entry.lastPathComponent
+        if let confidence = Matcher.match(entryName: name, identity: identity) {
+          if !claimedByRival(name, target: identity, rivals: rivals) {
+            append(entry, root.kind, confidence)
+          }
+          continue
+        }
+        // Vendor directory descent: only into a directory named after the
+        // app's own vendor, only one level, and never the vendor dir itself.
+        if Self.vendorNestedKinds.contains(root.kind),
+          let vendor = Matcher.vendorToken(bundleID: identity.bundleID),
+          Matcher.normalize(name) == vendor,
+          (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
+          let children = try? fm.contentsOfDirectory(
+            at: entry, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+        {
+          for child in children {
+            let childName = child.lastPathComponent
+            guard
+              let confidence = Matcher.matchVendorChild(
+                vendorDir: name, entryName: childName, identity: identity),
+              !claimedByRival(childName, target: identity, rivals: rivals),
+              !claimedByRivalName(vendorDir: name, childName: childName, rivals: rivals)
+            else { continue }
+            append(child, root.kind, confidence)
+          }
+        }
       }
     }
     return items.sorted { lhs, rhs in
       if lhs.confidence != rhs.confidence { return lhs.confidence > rhs.confidence }
       return lhs.url.path < rhs.url.path
+    }
+  }
+
+  /// True when another installed app's (longer) bundle identifier claims the
+  /// entry, e.g. `com.google.Chrome.beta.plist` while Chrome Beta is
+  /// installed.
+  private func claimedByRival(
+    _ entryName: String, target: AppIdentity, rivals: [AppIdentity]
+  ) -> Bool {
+    let entry = entryName.lowercased()
+    let targetLength = target.bundleID.count
+    for rival in rivals {
+      let rivalID = rival.bundleID.lowercased()
+      guard rivalID.count > targetLength else { continue }
+      if entry == rivalID || entry.hasPrefix(rivalID + ".") {
+        return true
+      }
+    }
+    return false
+  }
+
+  /// True when a vendor-directory child composes another installed app's
+  /// name, e.g. `Google` + `Chrome Beta` while Chrome Beta is installed.
+  private func claimedByRivalName(
+    vendorDir: String, childName: String, rivals: [AppIdentity]
+  ) -> Bool {
+    let composed = Matcher.normalize(vendorDir) + Matcher.normalize(childName)
+    let direct = Matcher.normalize(childName)
+    return rivals.contains { rival in
+      let rivalName = Matcher.normalize(rival.name)
+      return !rivalName.isEmpty && (composed == rivalName || direct == rivalName)
     }
   }
 }

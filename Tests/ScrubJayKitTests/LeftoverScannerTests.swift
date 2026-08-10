@@ -28,6 +28,14 @@ struct LeftoverScannerTests {
     try create("Library/Preferences/com.google.Chrome.plist", file: true)
     try create("Library/Saved Application State/com.google.Chrome.savedState")
     try create("Library/HTTPStorages/com.google.Chrome")
+    // Vendor-nested: Application Support/Google/Chrome plus siblings that
+    // must not be swept along.
+    try create("Library/Application Support/Google/Chrome")
+    try create("Library/Application Support/Google/Chrome Beta")
+    try create("Library/Application Support/Google/GoogleUpdater")
+    try create("Library/Application Support/Google/RLZ")
+    // Sibling channel app.
+    try create("Library/Preferences/com.google.Chrome.beta.plist", file: true)
     // Unrelated.
     try create("Library/Caches/org.mozilla.firefox")
     try create("Library/Preferences/com.google.Chromecast.plist", file: true)
@@ -35,25 +43,75 @@ struct LeftoverScannerTests {
     return home
   }
 
+  let chrome = AppIdentity(bundleID: "com.google.Chrome", name: "Google Chrome")
+  let chromeBeta = AppIdentity(bundleID: "com.google.Chrome.beta", name: "Google Chrome Beta")
+
   @Test func findsChromeLeftoversAndNothingElse() throws {
     let home = try makeFixtureHome()
     defer { try? FileManager.default.removeItem(at: home) }
 
     let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
-    let identity = AppIdentity(bundleID: "com.google.Chrome", name: "Google Chrome")
-    let items = scanner.scan(for: identity, computeSizes: false)
+    let items = scanner.scan(for: chrome, amongInstalled: [chrome, chromeBeta], computeSizes: false)
 
-    let paths = Set(items.map { $0.url.lastPathComponent })
+    let paths = items.map { $0.url.lastPathComponent }
     #expect(
-      paths == [
+      Set(paths) == [
         "Google Chrome", "com.google.Chrome", "com.google.Chrome.plist",
-        "com.google.Chrome.savedState", "com.google.Chrome",
+        "com.google.Chrome.savedState", "Chrome",
       ])
-    #expect(items.count == 5)
+    #expect(items.count == 6)  // com.google.Chrome appears in two roots
     #expect(items.allSatisfy { $0.confidence >= .medium })
     // Sorted by confidence, certain first.
     #expect(items.first?.confidence == .certain)
     #expect(items.last?.confidence == .medium)
+  }
+
+  @Test func vendorNestedChildIsFoundButSiblingsAreNot() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
+    let items = scanner.scan(for: chrome, amongInstalled: [chrome, chromeBeta], computeSizes: false)
+
+    let nested = items.filter { $0.url.path.contains("/Google/") }
+    #expect(nested.map { $0.url.lastPathComponent } == ["Chrome"])
+    // The vendor directory itself is never a result.
+    #expect(!items.contains { $0.url.lastPathComponent == "Google" })
+  }
+
+  @Test func rivalChannelAppClaimsItsFiles() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
+
+    // With Chrome Beta installed, its plist is not attributed to Chrome.
+    let withBeta = scanner.scan(
+      for: chrome, amongInstalled: [chrome, chromeBeta], computeSizes: false)
+    #expect(!withBeta.contains { $0.url.lastPathComponent == "com.google.Chrome.beta.plist" })
+
+    // Without Chrome Beta installed, the file is reported — at low, never
+    // preselected.
+    let withoutBeta = scanner.scan(for: chrome, amongInstalled: [chrome], computeSizes: false)
+    let betaPlist = withoutBeta.first { $0.url.lastPathComponent == "com.google.Chrome.beta.plist" }
+    #expect(betaPlist?.confidence == .low)
+  }
+
+  @Test func scanningBetaFindsItsOwnFiles() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
+    let items = scanner.scan(
+      for: chromeBeta, amongInstalled: [chrome, chromeBeta], computeSizes: false)
+
+    let paths = Set(items.map { $0.url.lastPathComponent })
+    #expect(paths.contains("com.google.Chrome.beta.plist"))
+    #expect(paths.contains("Chrome Beta"))
+    // Chrome's own files are never attributed to Beta.
+    #expect(!paths.contains("com.google.Chrome.plist"))
+    #expect(!paths.contains("Chrome"))
+    #expect(!paths.contains("Google Chrome"))
   }
 
   @Test func missingRootsAreSkipped() {

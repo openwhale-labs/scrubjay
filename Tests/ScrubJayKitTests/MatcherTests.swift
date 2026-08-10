@@ -20,7 +20,37 @@ struct MatcherTests {
 
   @Test func bundleIDWithUnknownSuffixIsHigh() {
     #expect(Matcher.match(entryName: "com.google.Chrome.helper", identity: chrome) == .high)
-    #expect(Matcher.match(entryName: "com.google.Chrome.canary.plist", identity: chrome) == .high)
+  }
+
+  @Test func channelSuffixIsDowngradedToLow() {
+    // These likely belong to a sibling channel app (Chrome Beta/Canary),
+    // installed or not — never worth preselecting.
+    #expect(Matcher.match(entryName: "com.google.Chrome.beta.plist", identity: chrome) == .low)
+    #expect(Matcher.match(entryName: "com.google.Chrome.canary.plist", identity: chrome) == .low)
+    #expect(Matcher.match(entryName: "com.google.Chrome.beta", identity: chrome) == .low)
+  }
+
+  @Test func vendorChildComposesAppName() {
+    #expect(
+      Matcher.matchVendorChild(vendorDir: "Google", entryName: "Chrome", identity: chrome)
+        == .medium)
+    #expect(
+      Matcher.matchVendorChild(vendorDir: "Google", entryName: "Chrome Beta", identity: chrome)
+        == nil)
+    #expect(
+      Matcher.matchVendorChild(vendorDir: "Google", entryName: "GoogleUpdater", identity: chrome)
+        == nil)
+    // Bundle-ID rules still apply to children.
+    #expect(
+      Matcher.matchVendorChild(
+        vendorDir: "Google", entryName: "com.google.Chrome", identity: chrome) == .certain)
+  }
+
+  @Test func vendorTokenExtraction() {
+    #expect(Matcher.vendorToken(bundleID: "com.google.Chrome") == "google")
+    #expect(Matcher.vendorToken(bundleID: "org.mozilla.firefox") == "mozilla")
+    #expect(Matcher.vendorToken(bundleID: "weirdapp") == nil)
+    #expect(Matcher.vendorToken(bundleID: "com.app") == nil)
   }
 
   @Test func siblingBundleIDDoesNotMatch() {

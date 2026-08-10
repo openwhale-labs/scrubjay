@@ -34,8 +34,7 @@ extension Confidence: ExpressibleByArgument {
 }
 
 /// Resolve a user-supplied query to a single installed app.
-func resolveApp(query: String) throws -> InstalledApp {
-  let apps = AppInventory.discoverApps()
+func resolveApp(query: String, among apps: [InstalledApp]) throws -> InstalledApp {
   let lowered = query.lowercased()
   if let exact = apps.first(where: {
     $0.bundleID.lowercased() == lowered || $0.name.lowercased() == lowered

@@ -26,6 +26,14 @@ public enum Matcher {
     "support", "library", "data", "temp", "tmp", "update", "updater",
   ]
 
+  /// Release-channel tokens. `com.google.Chrome.beta.plist` is prefixed by
+  /// Chrome's bundle ID but belongs to Chrome Beta — a different app. When a
+  /// prefix match continues with one of these, the entry is reported at `low`
+  /// so it is never selected automatically.
+  private static let channelTokens: Set<String> = [
+    "beta", "canary", "dev", "nightly", "alpha", "preview", "insiders",
+  ]
+
   /// Decide whether a directory entry belongs to the app.
   ///
   /// - Parameter entryName: the last path component of a candidate file or
@@ -41,7 +49,17 @@ public enum Matcher {
     }
     if entry.hasPrefix(bundleID + ".") {
       let suffix = String(entry.dropFirst(bundleID.count + 1))
-      return knownSuffixes.contains(suffix) ? .certain : .high
+      if knownSuffixes.contains(suffix) {
+        return .certain
+      }
+      // A channel token right after the bundle ID usually denotes a sibling
+      // app (Chrome Beta, VS Code Insiders). Report, but never preselect.
+      if let firstToken = suffix.split(separator: ".").first,
+        channelTokens.contains(String(firstToken))
+      {
+        return .low
+      }
+      return .high
     }
 
     // Name matches. Normalization strips separators so that
@@ -57,6 +75,31 @@ public enum Matcher {
     }
 
     return nil
+  }
+
+  /// Match a child entry inside a vendor directory, e.g. `Chrome` inside
+  /// `Application Support/Google/`. Bundle-ID rules apply unchanged; on top
+  /// of them, vendor name + child name may compose the app name
+  /// ("Google" + "Chrome" → "Google Chrome").
+  public static func matchVendorChild(
+    vendorDir: String, entryName: String, identity: AppIdentity
+  ) -> Confidence? {
+    if let direct = match(entryName: entryName, identity: identity) {
+      return direct
+    }
+    let composed = normalize(vendorDir) + normalize(entryName)
+    if composed == normalize(identity.name), !normalize(entryName).isEmpty {
+      return .medium
+    }
+    return nil
+  }
+
+  /// The vendor token of a reverse-DNS bundle ID: `com.google.Chrome` →
+  /// `google`. Requires at least vendor + product components.
+  public static func vendorToken(bundleID: String) -> String? {
+    let parts = bundleID.split(separator: ".")
+    guard parts.count >= 3 else { return nil }
+    return String(parts[1]).lowercased()
   }
 
   static func normalize(_ name: String) -> String {

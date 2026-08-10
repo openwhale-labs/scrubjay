@@ -17,11 +17,13 @@ struct Scan: ParsableCommand {
   var noSizes = false
 
   func run() throws {
-    let app = try resolveApp(query: query)
+    let apps = AppInventory.discoverApps()
+    let app = try resolveApp(query: query, among: apps)
     print("\(app.name) (\(app.bundleID)) — \(app.bundleURL.path)\n")
 
     let scanner = LeftoverScanner.forCurrentUser()
-    let items = scanner.scan(for: app.identity, computeSizes: !noSizes)
+    let others = apps.map(\.identity)
+    let items = scanner.scan(for: app.identity, amongInstalled: others, computeSizes: !noSizes)
       .filter { $0.confidence >= minConfidence }
 
     guard !items.isEmpty else {
