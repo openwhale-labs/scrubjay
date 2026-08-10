@@ -36,6 +36,22 @@ struct LeftoverScannerTests {
     try create("Library/Application Support/Google/RLZ")
     // Sibling channel app.
     try create("Library/Preferences/com.google.Chrome.beta.plist", file: true)
+    // Launch agent with a real plist payload.
+    try create(
+      "Library/LaunchAgents/com.google.Chrome.agent.plist", file: true,
+      contents: """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict>
+        <key>Label</key><string>com.google.Chrome.agent</string>
+        </dict></plist>
+        """)
+    // Recent-documents shared file list.
+    try create(
+      "Library/Application Support/com.apple.sharedfilelist/"
+        + "com.apple.LSSharedFileList.ApplicationRecentDocuments/com.google.Chrome.sfl4",
+      file: true)
     // Unrelated.
     try create("Library/Caches/org.mozilla.firefox")
     try create("Library/Preferences/com.google.Chromecast.plist", file: true)
@@ -57,9 +73,16 @@ struct LeftoverScannerTests {
     #expect(
       Set(paths) == [
         "Google Chrome", "com.google.Chrome", "com.google.Chrome.plist",
-        "com.google.Chrome.savedState", "Chrome",
+        "com.google.Chrome.savedState", "Chrome", "com.google.Chrome.agent.plist",
+        "com.google.Chrome.sfl4",
       ])
-    #expect(items.count == 6)  // com.google.Chrome appears in two roots
+    #expect(items.count == 8)  // com.google.Chrome appears in two roots
+
+    // The launch agent carries its parsed label; a fixture label is never
+    // loaded in the real launchd domain.
+    let agentItem = items.first { $0.url.lastPathComponent == "com.google.Chrome.agent.plist" }
+    #expect(agentItem?.launchAgent == LaunchAgentInfo(
+      label: "com.google.Chrome.agent", isLoaded: false))
     #expect(items.allSatisfy { $0.confidence >= .medium })
     // Sorted by confidence, certain first.
     #expect(items.first?.confidence == .certain)

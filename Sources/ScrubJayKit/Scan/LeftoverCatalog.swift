@@ -15,6 +15,7 @@ public enum LeftoverKind: String, Sendable, CaseIterable {
   case launchAgents = "Launch Agents"
   case applicationScripts = "Application Scripts"
   case cookies = "Cookies"
+  case recentDocuments = "Recent Documents"
 }
 
 /// A directory whose top-level entries are matched against an app identity.
@@ -53,6 +54,10 @@ public enum LeftoverCatalog {
       root(.launchAgents, "LaunchAgents"),
       root(.applicationScripts, "Application Scripts"),
       root(.cookies, "Cookies"),
+      root(
+        .recentDocuments,
+        "Application Support/com.apple.sharedfilelist/"
+          + "com.apple.LSSharedFileList.ApplicationRecentDocuments"),
     ]
   }
 }

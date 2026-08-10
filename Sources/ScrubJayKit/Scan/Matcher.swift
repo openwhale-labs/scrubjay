@@ -17,7 +17,7 @@ public enum Matcher {
   /// e.g. `com.google.Chrome.plist` or `com.google.Chrome.savedState`.
   /// Stored lowercase; matching is case-insensitive.
   private static let knownSuffixes: Set<String> = [
-    "plist", "savedstate", "binarycookies", "plist.lockfile", "sfl2", "sfl3",
+    "plist", "savedstate", "binarycookies", "plist.lockfile", "sfl2", "sfl3", "sfl4",
   ]
 
   /// Names too generic to mean anything on their own.
