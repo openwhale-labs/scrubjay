@@ -53,6 +53,8 @@ Two hazards observed on real machines are handled in the scanner, both biased to
 
 ## Decision record — council review, 2026-08-10
 
+Status: frozen 2026-08-10 (both reviewers verified all findings closed, no new P0).
+
 Two independent reviews (baseline `0cf12ea`) drove these changes, all landed:
 
 - Scan generation token: a stale scan can no longer be shown for, or removed as, the newer selection; removal re-asserts the plan belongs to the currently selected app.
