@@ -1,0 +1,6 @@
+{
+  "name": "scrubjay-web",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "public" },
+  "routes": [{ "pattern": "scrubjay.openwhale.dev", "custom_domain": true }]
+}

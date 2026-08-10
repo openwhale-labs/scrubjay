@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Perched scrub-jay, facing left: round head, small beak, plump body,
+       the signature long tail sweeping down past the branch. -->
+  <circle cx="38" cy="27" r="13" fill="#3E76C6"/>
+  <path d="M26 22 L13 27 L26 32 Z" fill="#1F3C61"/>
+  <circle cx="34" cy="24" r="3.2" fill="#0D1B2C"/>
+  <path d="M28 34
+           C22 44 24 58 36 64
+           C44 68 54 66 59 58
+           C63 51 62 42 56 36
+           C50 30 38 29 32 33 Z"
+        fill="#3E76C6"/>
+  <polygon points="56,50 90,80 58,63" fill="#1F3C61"/>
+  <rect x="20" y="72" width="52" height="4.5" rx="2.25" fill="#8A94A3"/>
+  <rect x="38" y="64" width="3" height="9" fill="#1F3C61"/>
+  <rect x="47" y="65" width="3" height="8" fill="#1F3C61"/>
+</svg>

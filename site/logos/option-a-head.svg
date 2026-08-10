@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Scrub-jay head in profile: azure crown, pale throat, no crest. -->
+  <circle cx="46" cy="50" r="30" fill="#3E76C6"/>
+  <path d="M46 80 a30 30 0 0 0 26-15 L46 56 Z" fill="#E9F0F8"/>
+  <path d="M72 42 L96 52 L72 62 Z" fill="#1F3C61"/>
+  <circle cx="57" cy="41" r="4.5" fill="#0D1B2C"/>
+</svg>

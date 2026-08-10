@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Origami jay: three folds — head, wing, long tail. -->
+  <polygon points="10,42 42,22 46,50" fill="#5D93D8"/>
+  <polygon points="42,22 82,36 46,66" fill="#3E76C6"/>
+  <polygon points="82,36 94,86 52,62" fill="#1F3C61"/>
+  <circle cx="27" cy="36" r="3.5" fill="#0D1B2C"/>
+</svg>

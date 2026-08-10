@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- A tail feather that reads as a check mark: clean, verified. -->
+  <path d="M18 56 L40 78 L84 26"
+        fill="none" stroke="#3E76C6" stroke-width="15"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M43 74 L84 26" fill="none" stroke="#1F3C61" stroke-width="2.5"
+        stroke-linecap="round" opacity="0.7"/>
+  <path d="M84 26 L94 14 L88 32 Z" fill="#1F3C61"/>
+</svg>

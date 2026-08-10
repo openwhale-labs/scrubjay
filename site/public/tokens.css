@@ -1,0 +1,110 @@
+/**
+ * Design tokens — the starting point for a new site, so nobody writes
+ * `font-size: 13.6px` on page three and a slightly different one on page four.
+ *
+ * Built on Open Props (https://open-props.style), a plain-CSS variable library.
+ * Two ways to use it:
+ *
+ *   1. Whole library, no build step:
+ *        @import "https://unpkg.com/open-props";
+ *      then map the semantic names below onto its raw props.
+ *   2. Vendored (recommended for production — no third-party request):
+ *        pnpm add open-props
+ *        @import "open-props/style";
+ *
+ * The semantic layer below is what components use. Components never reach for
+ * a raw scale value: `.card h3 { font-size: var(--fs-lg) }`, never
+ * `font-size: 1.25rem`.
+ *
+ * Enforce it with stylelint.config.js from this same directory.
+ */
+
+:root {
+  /* ---- Type. Eight steps, tight at the bottom, wider as it climbs — the
+     shape Tailwind (12/14/16/18/20/24/30/36) and Carbon both use. Fixed
+     increments are not an industry pattern; ratios are. Nothing between the
+     steps: if a size feels wrong it belongs in a different step. ---- */
+  --fs-xs: 0.75rem; /* 12 — meta, table headers, chips, timestamps */
+  --fs-sm: 0.875rem; /* 14 — UI body: tables, menus, buttons, dense text */
+  --fs-md: 1rem; /* 16 — reading body, prose */
+  --fs-lg: 1.25rem; /* 20 — card and panel headings */
+  --fs-xl: 1.5rem; /* 24 — page headings, stat numbers */
+  --fs-2xl: 2rem; /* 32 — section headings */
+  --fs-3xl: 2.5rem; /* 40 — price, hero numbers */
+  --fs-4xl: 3.75rem; /* 60 — hero ceiling, only as a clamp() upper bound */
+
+  /* ---- Spacing is a GRID, not a token list: every padding/margin/gap is a
+     multiple of 4px, halved to 2px below 8px (Tailwind: 0.5=2, 1=4, 1.5=6,
+     2=8, 3=12…). 1.25rem is legal because it lands on the grid, not because
+     someone named it. These name the common rhythm. ---- */
+  --sp-1: 0.25rem; /* 4 */
+  --sp-2: 0.5rem; /* 8 */
+  --sp-3: 0.75rem; /* 12 */
+  --sp-4: 1rem; /* 16 */
+  --sp-5: 1.5rem; /* 24 */
+  --sp-6: 2rem; /* 32 */
+  --sp-7: 3rem; /* 48 */
+
+  /* ---- Controls: three heights, nothing in between. ---- */
+  --ctl-sm: 32px; /* dense chrome: toolbars, in-table actions */
+  --ctl-md: 40px; /* form inputs, standard action buttons */
+  --ctl-lg: 48px; /* hero inputs, marketing CTAs */
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 18px;
+  --radius-pill: 999px; /* 50% stays literal — a circle is not a step */
+
+  /* ---- Colour. Every colour a component uses is named here. A literal earns
+     a token when a SECOND place needs it; one-off decoration (a gradient stop,
+     a zebra stripe) stays literal rather than becoming a token with one
+     caller. Replace these with the brand's own values. ---- */
+  /* ScrubJay brand: azure of the scrub-jay's crown on a bright page. */
+  --bg: #f7f9fb;
+  --bg-elevated: #ffffff;
+  --bg-soft: #eef2f7;
+  --border: rgb(23 34 47 / 10%);
+  --border-strong: rgb(23 34 47 / 18%);
+  --text: #17222f;
+  --text-muted: #5c6a7d;
+  --text-dim: #8b98a9;
+  --accent: #3e76c6;
+  --accent-strong: #2d5fa8; /* hover / gradient stop */
+  --accent-deep: #1f3c61; /* the jay's flight feathers */
+  --accent-soft: rgb(62 118 198 / 10%); /* tinted background */
+  --accent-ink: #ffffff; /* text on --accent */
+  --focus-ring: rgb(62 118 198 / 45%);
+  --shadow: 0 18px 60px rgb(23 34 47 / 10%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e141d;
+    --bg-elevated: #16202e;
+    --bg-soft: #1b2634;
+    --border: rgb(236 241 247 / 10%);
+    --border-strong: rgb(236 241 247 / 18%);
+    --text: #ecf1f7;
+    --text-muted: #93a1b4;
+    --text-dim: #64738a;
+    --accent: #5d93d8;
+    --accent-strong: #7caae2;
+    --accent-deep: #a9c4e8;
+    --accent-soft: rgb(93 147 216 / 14%);
+    --focus-ring: rgb(93 147 216 / 45%);
+    --shadow: 0 18px 60px rgb(0 0 0 / 45%);
+  }
+}
+
+/**
+ * Breakpoints cannot be custom properties: `@media (max-width: var(--bp))` is
+ * dropped by the browser, because media conditions are evaluated before custom
+ * properties resolve. Pick three, write them literally, and let stylelint's
+ * media-feature-name-value-allowed-list keep a fourth from appearing.
+ *
+ *   560px  small phone
+ *   720px  sidebar becomes a drawer / single column
+ *   900px  multi-column grids collapse
+ *
+ * With a build step, PostCSS `@custom-media` gives you named breakpoints.
+ */
