@@ -50,11 +50,19 @@ def build() -> None:
 def verify_app() -> None:
     print("==> Verifying signatures")
     run("codesign", "--verify", "--deep", "--strict", str(APP))
-    helper = APP / "Contents" / "Library" / "HelperTools" / "dev.openwhale.scrubjay.helper"
-    plist = APP / "Contents" / "Library" / "LaunchDaemons" / "dev.openwhale.scrubjay.helper.plist"
+    helper_dir = APP / "Contents" / "Library" / "HelperTools"
+    daemon_dir = APP / "Contents" / "Library" / "LaunchDaemons"
+    helper = helper_dir / "dev.openwhale.scrubjay.helper"
+    plist = daemon_dir / "dev.openwhale.scrubjay.helper.plist"
     for path in (helper, plist):
         if not path.exists():
             raise SystemExit(f"missing embedded helper piece: {path}")
+    # Exactly one privileged helper ships — a stale one from a previous
+    # bundle identifier would be extra root code in the release.
+    for directory, expected in ((helper_dir, helper), (daemon_dir, plist)):
+        found = sorted(p.name for p in directory.iterdir())
+        if found != [expected.name]:
+            raise SystemExit(f"unexpected contents in {directory}: {found}")
     for target in (str(APP), str(helper)):
         info = run("codesign", "-dv", target)
         if "67ULUSQ947" not in info:
@@ -66,10 +74,13 @@ def verify_app() -> None:
     print("    app and helper signed, hardened runtime on")
 
 
-def make_dmg(ver: str) -> Path:
+def make_dmg(ver: str, notarized: bool) -> Path:
     print("==> Building DMG")
     DIST.mkdir(exist_ok=True)
-    dmg = DIST / f"ScrubJay-{ver}.dmg"
+    # The release file name is reserved for artifacts that completed
+    # notarization and Gatekeeper; anything else is clearly marked.
+    suffix = "" if notarized else "-unnotarized"
+    dmg = DIST / f"ScrubJay-{ver}{suffix}.dmg"
     dmg.unlink(missing_ok=True)
     staging = DIST / "dmg-staging"
     shutil.rmtree(staging, ignore_errors=True)
@@ -124,9 +135,9 @@ def main() -> int:
     ver = version()
     build()
     verify_app()
-    dmg = make_dmg(ver)
+    dmg = make_dmg(ver, notarized=not args.skip_notarize)
     if args.skip_notarize:
-        print(f"==> Skipped notarization; unnotarized DMG at {dmg}")
+        print(f"==> Skipped notarization; test build at {dmg}")
         return 0
     notarize(dmg, args.profile)
     gatekeeper(dmg)

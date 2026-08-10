@@ -89,6 +89,18 @@ struct Remove: ParsableCommand {
       }
     }
 
+    // System-domain items need the privileged helper, which lives in the
+    // app — the CLI cannot remove them.
+    let systemItems = items.filter { LeftoverCatalog.isSystemPath($0.url) }
+    if !systemItems.isEmpty {
+      print("Skipping \(systemItems.count) system items — remove these in the ScrubJay app:")
+      for item in systemItems {
+        print("  skipped  \(item.url.path)")
+      }
+      print("")
+      items.removeAll { LeftoverCatalog.isSystemPath($0.url) }
+    }
+
     var failures = 0
     for item in items {
       if let agent = item.launchAgent, agent.isLoaded, agent.belongsTo(bundleID: app.bundleID) {

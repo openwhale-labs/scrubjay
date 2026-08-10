@@ -20,10 +20,15 @@ def main() -> int:
     helper = products / "dev.openwhale.scrubjay.helper"
     plist = srcroot / "Helper" / "dev.openwhale.scrubjay.helper.plist"
 
+    # Wipe both directories first: an incremental build over a renamed
+    # bundle identifier would otherwise keep shipping the previous
+    # privileged helper alongside the current one.
     helper_dir = app / "Contents" / "Library" / "HelperTools"
     daemon_dir = app / "Contents" / "Library" / "LaunchDaemons"
-    helper_dir.mkdir(parents=True, exist_ok=True)
-    daemon_dir.mkdir(parents=True, exist_ok=True)
+    for directory in (helper_dir, daemon_dir):
+        if directory.exists():
+            shutil.rmtree(directory)
+        directory.mkdir(parents=True)
 
     shutil.copy2(helper, helper_dir / helper.name)
     shutil.copy2(plist, daemon_dir / plist.name)

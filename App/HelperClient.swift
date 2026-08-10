@@ -61,11 +61,13 @@ final class HelperClient {
     let connection = NSXPCConnection(
       machServiceName: HelperConstants.machServiceName, options: .privileged)
     connection.remoteObjectInterface = NSXPCInterface(with: ScrubJayHelperProtocol.self)
+    // Authenticate the helper too: talk only to a daemon signed by us, so a
+    // planted service cannot impersonate it.
+    connection.setCodeSigningRequirement(
+      "anchor apple generic and identifier \"\(HelperConstants.machServiceName)\" "
+        + "and certificate leaf[subject.OU] = \"67ULUSQ947\"")
     connection.resume()
     defer { connection.invalidate() }
-
-    let trashDirectory = FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent(".Trash").path
 
     // The XPC error handler and the reply are mutually exclusive in normal
     // operation, but nothing in the API guarantees it — resume exactly once.
@@ -87,10 +89,7 @@ final class HelperClient {
         }
         return
       }
-      proxy.trashSystemItems(
-        paths: urls.map(\.path), trashDirectory: trashDirectory,
-        uid: getuid(), gid: getgid()
-      ) { failures in
+      proxy.trashSystemItems(paths: urls.map(\.path)) { failures in
         once.run { continuation.resume(returning: failures) }
       }
     }
