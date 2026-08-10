@@ -23,17 +23,20 @@ public enum HelperConstants {
   public static let plistName = "dev.openwhale.scrubjay.helper.plist"
   public static let version = "3"
 
-  /// The helper refuses to touch anything outside these prefixes, and never
-  /// the prefix roots themselves. /Applications covers root-owned app
-  /// bundles (Tunnelblick installs itself owned by root).
-  public static let allowedPrefixes = ["/Library/", "/Applications/"]
-
-  /// System directories the helper never moves as a whole, even though they
-  /// sit under an allowed prefix — only their per-app children qualify.
-  public static let protectedSystemPaths: Set<String> = [
-    "/Library/Application Support", "/Library/Caches", "/Library/Preferences",
-    "/Library/LaunchAgents", "/Library/LaunchDaemons", "/Library/PrivilegedHelperTools",
-    "/Library/Extensions", "/Library/Frameworks", "/Library/Internet Plug-Ins",
-    "/Library/Input Methods", "/Library/Keychains", "/Library/Security",
+  /// An allow-list, not a prefix filter: the helper moves only direct
+  /// children of these directories — the same roots the scanner reports —
+  /// so nothing else under /Library is reachable. Keychains, Security,
+  /// Extensions and friends are absent by construction.
+  public static let allowedLibraryRoots = [
+    "/Library/Application Support",
+    "/Library/Caches",
+    "/Library/Preferences",
+    "/Library/LaunchAgents",
+    "/Library/LaunchDaemons",
+    "/Library/PrivilegedHelperTools",
   ]
+
+  /// App bundles live here; only whole `.app` bundles qualify. Covers
+  /// root-owned installs (Tunnelblick chowns itself to root).
+  public static let applicationsRoot = "/Applications"
 }

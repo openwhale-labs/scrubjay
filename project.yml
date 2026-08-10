@@ -10,7 +10,9 @@ targets:
   ScrubJayHelper:
     type: tool
     platform: macOS
-    sources: [Helper, Shared]
+    sources:
+      - Helper
+      - Sources/ScrubJayKit/Remove/HelperProtocol.swift
     settings:
       base:
         PRODUCT_NAME: dev.openwhale.scrubjay.helper
@@ -28,7 +30,7 @@ targets:
   ScrubJay:
     type: application
     platform: macOS
-    sources: [App, Shared]
+    sources: [App]
     dependencies:
       - package: ScrubJayKit
         product: ScrubJayKit

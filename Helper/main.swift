@@ -67,52 +67,56 @@ final class HelperService: NSObject, ScrubJayHelperProtocol {
 
   // MARK: Policy
 
-  /// The calling user's Trash, resolved from their home directory. Never
-  /// taken from the request.
+  /// The calling user's Trash, derived from their home directory.
+  ///
+  /// The path must be a real directory, never a symlink: a link here would
+  /// redirect a root-privileged move anywhere the link points, which is a
+  /// privilege-escalation primitive rather than a Trash.
   private func trashDirectory() -> URL? {
     guard let entry = getpwuid(peerUID), let dir = entry.pointee.pw_dir else { return nil }
     let home = URL(fileURLWithPath: String(cString: dir), isDirectory: true)
-      .resolvingSymlinksInPath()
     let trash = home.appendingPathComponent(".Trash", isDirectory: true)
-    var isDirectory: ObjCBool = false
-    guard FileManager.default.fileExists(atPath: trash.path, isDirectory: &isDirectory),
-      isDirectory.boolValue
-    else {
-      return nil
-    }
+    guard isRealDirectoryWithoutLinks(trash.path) else { return nil }
     return trash
   }
 
-  /// A source is acceptable only when it resolves to a real, non-symlink
-  /// item that sits at least one level below one of the allowed prefixes,
-  /// is not itself a search root, and — under /Applications — is an app
-  /// bundle. Returns the resolved URL to act on.
-  private func resolvedAllowedSource(_ path: String) -> URL? {
-    let resolved = URL(fileURLWithPath: path).standardizedFileURL
-      .resolvingSymlinksInPath()
-    let full = resolved.path
-
-    // A symlink must never be followed into a privileged move.
+  /// True when the path is a directory and no component of it is a symlink,
+  /// so following it cannot leave the intended location.
+  private func isRealDirectoryWithoutLinks(_ path: String) -> Bool {
     var status = stat()
-    guard lstat(full, &status) == 0, (status.st_mode & S_IFMT) != S_IFLNK else { return nil }
+    guard lstat(path, &status) == 0, (status.st_mode & S_IFMT) == S_IFDIR else { return false }
+    return hasNoSymlinkComponents(path)
+  }
 
-    guard let prefix = HelperConstants.allowedPrefixes.first(where: { full.hasPrefix($0) }) else {
-      return nil
+  /// True when the fully resolved path equals the standardized path — i.e.
+  /// no component along the way is a symbolic link. Authorization and the
+  /// move then act on the same real location.
+  private func hasNoSymlinkComponents(_ path: String) -> Bool {
+    guard let resolved = realpath(path, nil) else { return false }
+    defer { free(resolved) }
+    return String(cString: resolved) == URL(fileURLWithPath: path).standardizedFileURL.path
+  }
+
+  /// A source qualifies only when it is a direct child of one of the
+  /// allow-listed roots, contains no symlinked path component, and — under
+  /// /Applications — is a whole `.app` bundle.
+  private func resolvedAllowedSource(_ path: String) -> URL? {
+    let url = URL(fileURLWithPath: path).standardizedFileURL
+    let full = url.path
+
+    // No component may be a link: a link anywhere in the path could point
+    // the privileged move at something else entirely.
+    guard hasNoSymlinkComponents(full) else { return nil }
+
+    let parent = url.deletingLastPathComponent().path
+    guard !url.lastPathComponent.isEmpty, url.lastPathComponent != "/" else { return nil }
+
+    if parent == HelperConstants.applicationsRoot {
+      // Whole app bundles only, never their innards or loose files.
+      return url.pathExtension == "app" ? url : nil
     }
-    let relative = String(full.dropFirst(prefix.count))
-    guard !relative.isEmpty else { return nil }
-
-    if prefix == "/Applications/" {
-      // Only whole app bundles, never their innards or loose files.
-      guard !relative.contains("/"), resolved.pathExtension == "app" else { return nil }
-      return resolved
-    }
-
-    // Under /Library: never a search root itself (…/Caches), always a leaf
-    // owned by some app inside one (…/Caches/com.example.app).
-    guard relative.contains("/") else { return nil }
-    guard !HelperConstants.protectedSystemPaths.contains(full) else { return nil }
-    return resolved
+    // Direct children of the scanner's own system roots, nothing else.
+    return HelperConstants.allowedLibraryRoots.contains(parent) ? url : nil
   }
 
   // MARK: Ownership

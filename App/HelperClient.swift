@@ -1,4 +1,5 @@
 import Foundation
+import ScrubJayKit
 import ServiceManagement
 
 /// App-side face of the privileged helper: registration through
