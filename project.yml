@@ -1,0 +1,26 @@
+name: ScrubJay
+options:
+  bundleIdPrefix: com.openwhale
+  deploymentTarget:
+    macOS: "14.0"
+packages:
+  ScrubJayKit:
+    path: .
+targets:
+  ScrubJay:
+    type: application
+    platform: macOS
+    sources: [App]
+    dependencies:
+      - package: ScrubJayKit
+        product: ScrubJayKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openwhale.scrubjay
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        CODE_SIGN_IDENTITY: "-"
+        SWIFT_VERSION: 6.0
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
