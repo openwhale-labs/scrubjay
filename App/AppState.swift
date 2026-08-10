@@ -19,6 +19,8 @@ struct ScanResult {
   var isAppRunning: Bool
   /// Set when Homebrew installed this app.
   var caskToken: String?
+  /// True for apps whose data is irreplaceable history (chat archives).
+  var holdsChatHistory: Bool
 
   var selectedCount: Int {
     items.count(where: \.isSelected) + (appBundleSelected ? 1 : 0)
@@ -51,6 +53,10 @@ final class AppState {
   var devCaches: [SelectableCache]?
   var isScanning = false
   var removalError: String?
+  /// Bundle IDs of currently running apps, for the sidebar lock badge.
+  var runningBundleIDs: Set<String> = []
+  /// App bundle file names owned by Homebrew casks, for the sidebar badge.
+  var caskAppNames: Set<String> = []
 
   var filteredApps: [InstalledApp] {
     guard !query.isEmpty else { return apps }
@@ -62,6 +68,13 @@ final class AppState {
 
   func loadApps() async {
     apps = await Task.detached { AppInventory.discoverApps().filter { !$0.isAppleApp } }.value
+    caskAppNames = Set(
+      await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
+    refreshRunningApps()
+  }
+
+  func refreshRunningApps() {
+    runningBundleIDs = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
   }
 
   func scanSelectedApp() async {
@@ -88,14 +101,25 @@ final class AppState {
     }.value
 
     guard app.bundleID == selectedBundleID else { return }
+    refreshRunningApps()
+    let sensitive = SensitiveApps.holdsChatHistory(bundleID: app.bundleID)
     scan = ScanResult(
       app: app,
       appBundleSelected: true,
       appBundleSize: bundleSize,
-      // Preselection is confidence-driven: `low` is never preselected.
-      items: items.map { SelectableItem(item: $0, isSelected: $0.confidence >= .medium) },
+      // Preselection is confidence-driven: `low` is never preselected. For
+      // chat apps, data directories also start unselected — losing a cache
+      // costs a re-download, losing chat history costs the history.
+      items: items.map { item in
+        var selected = item.confidence >= .medium
+        if sensitive && SensitiveApps.dataKinds.contains(item.kind) {
+          selected = false
+        }
+        return SelectableItem(item: item, isSelected: selected)
+      },
       isAppRunning: Self.isRunning(bundleID: app.bundleID),
-      caskToken: cask
+      caskToken: cask,
+      holdsChatHistory: sensitive
     )
   }
 
