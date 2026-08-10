@@ -12,8 +12,10 @@ struct ContentView: View {
         Section {
           Label("Developer caches", systemImage: "hammer")
             .tag(AppState.devCachesSelectionID)
+            .listRowBackground(Color.clear)
           Label("Orphaned leftovers", systemImage: "questionmark.folder")
             .tag(AppState.orphansSelectionID)
+            .listRowBackground(Color.clear)
         }
         Section {
           ForEach(state.filteredApps) { app in
@@ -22,7 +24,17 @@ struct ContentView: View {
                 .resizable()
                 .frame(width: 28, height: 28)
               VStack(alignment: .leading, spacing: 2) {
-                Text(app.name)
+                HStack(spacing: 6) {
+                  Text(app.name)
+                  // Dock-style running dot; green = alive, the detail pane's
+                  // orange banner carries the "quit first" warning.
+                  if state.runningBundleIDs.contains(app.bundleID) {
+                    Circle()
+                      .fill(.green)
+                      .frame(width: 5, height: 5)
+                      .help("Running — quit before uninstalling")
+                  }
+                }
                 Text(app.bundleID)
                   .font(.caption)
                   .foregroundStyle(.secondary)
@@ -35,22 +47,6 @@ struct ContentView: View {
                   .monospacedDigit()
                   .help("App plus everything it left behind")
               }
-              // Badges live in a fixed-width slot so sizes align across
-              // rows regardless of how many badges a row carries.
-              HStack(spacing: 4) {
-                if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
-                  Image(systemName: "shippingbox")
-                    .foregroundStyle(.secondary)
-                    .help("Installed via Homebrew")
-                }
-                if state.runningBundleIDs.contains(app.bundleID) {
-                  Image(systemName: "lock.fill")
-                    .foregroundStyle(.secondary)
-                    .help("Running — quit before uninstalling")
-                }
-              }
-              .font(.caption)
-              .frame(width: 38, alignment: .leading)
             }
             .tag(app.bundleID)
           }
@@ -65,6 +61,7 @@ struct ContentView: View {
           .padding(.bottom, 6)
         }
       }
+      .alternatingRowBackgrounds()
       .searchable(text: $state.query, placement: .sidebar, prompt: "Search apps")
       .navigationSplitViewColumnWidth(min: 220, ideal: 260)
     } detail: {
