@@ -54,15 +54,27 @@ main {
   margin: 0 auto var(--sp-5);
 }
 
-.status-pill {
+.download {
   display: inline-block;
-  margin: 0;
-  padding: var(--sp-2) var(--sp-4);
+  height: var(--ctl-lg);
+  line-height: var(--ctl-lg);
+  padding: 0 var(--sp-6);
   border-radius: var(--radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: var(--fs-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: var(--fs-md);
   font-weight: 600;
+  text-decoration: none;
+}
+
+.download:hover {
+  background: var(--accent-strong);
+}
+
+.fine-print {
+  margin: var(--sp-3) 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
 }
 
 .features {

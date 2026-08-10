@@ -4,7 +4,7 @@ Uninstall Mac apps cleanly.
 
 ScrubJay removes an application together with the files it leaves behind — caches, preferences, containers, saved state, logs, launch agents. Every removal goes to the Trash, so nothing is lost for good.
 
-**Status: early development.** Not ready for daily use.
+**ScrubJay 0.1.0 is available** — download the notarized DMG at [scrubjay.openwhale.dev](https://scrubjay.openwhale.dev). Early release; expect rough edges.
 
 ## Build the app
 
