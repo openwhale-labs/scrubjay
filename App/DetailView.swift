@@ -71,9 +71,33 @@ struct DetailView: View {
         if let cask = scan.caskToken {
           brewHint(cask)
         }
+        if scan.items.contains(where: { LeftoverCatalog.isSystemPath($0.item.url) }) {
+          helperHint
+        }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding()
+  }
+
+  private var helperHint: some View {
+    HStack(spacing: 6) {
+      Image(systemName: "shield")
+      if state.helper.status == .enabled {
+        Text("System-level items are removed through the ScrubJay helper.")
+      } else {
+        Text("System-level items need the ScrubJay helper (\(state.helper.statusDescription)).")
+        Button("Enable…") {
+          do {
+            try state.helper.register()
+          } catch {
+            state.removalError = "Helper registration failed: \(error.localizedDescription)"
+          }
+        }
+      }
+    }
+    .font(.callout)
+    .foregroundStyle(.secondary)
+    .padding(.top, 4)
   }
 
   private func brewHint(_ cask: String) -> some View {
@@ -185,6 +209,12 @@ struct DetailView: View {
               .font(.caption)
               .foregroundStyle(.orange)
               .help("Launch agent \(agent.label) is loaded; it is unloaded before removal.")
+          }
+          if LeftoverCatalog.isSystemPath(url) {
+            Image(systemName: "shield")
+              .font(.caption)
+              .foregroundStyle(.secondary)
+              .help("System item — removal goes through the privileged helper.")
           }
         }
         Text(abbreviatedParent(of: url))

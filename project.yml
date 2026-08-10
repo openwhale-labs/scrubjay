@@ -7,19 +7,40 @@ packages:
   ScrubJayKit:
     path: .
 targets:
+  ScrubJayHelper:
+    type: tool
+    platform: macOS
+    sources: [Helper, Shared]
+    settings:
+      base:
+        PRODUCT_NAME: com.openwhale.scrubjay.helper
+        PRODUCT_BUNDLE_IDENTIFIER: com.openwhale.scrubjay.helper
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        DEVELOPMENT_TEAM: 67ULUSQ947
+        OTHER_CODE_SIGN_FLAGS: "-i com.openwhale.scrubjay.helper"
+        SWIFT_VERSION: 6.0
   ScrubJay:
     type: application
     platform: macOS
-    sources: [App]
+    sources: [App, Shared]
     dependencies:
       - package: ScrubJayKit
         product: ScrubJayKit
+      - target: ScrubJayHelper
+        embed: false
+    postBuildScripts:
+      - name: Embed privileged helper
+        script: /usr/bin/env python3 "${SRCROOT}/tools/embed_helper.py"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openwhale.scrubjay
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        DEVELOPMENT_TEAM: 67ULUSQ947
         SWIFT_VERSION: 6.0
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities

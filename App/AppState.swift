@@ -47,6 +47,8 @@ final class AppState {
   static let devCachesSelectionID = "scrubjay.dev-caches"
   static let orphansSelectionID = "scrubjay.orphans"
 
+  let helper = HelperClient()
+
   var apps: [InstalledApp] = []
   var query = ""
   var selectedBundleID: String?
@@ -152,6 +154,7 @@ final class AppState {
     guard generation == loadGeneration else { return }
     isScanning = false
     refreshRunningApps()
+    helper.refreshStatus()
     let sensitive = SensitiveApps.holdsChatHistory(bundleID: app.bundleID)
     scan = ScanResult(
       app: app,
@@ -186,7 +189,27 @@ final class AppState {
     let generation = loadGeneration
     var failures: [String] = []
 
-    for entry in current.items where entry.isSelected {
+    // System-domain items go through the privileged helper.
+    let systemEntries = current.items.filter {
+      $0.isSelected && LeftoverCatalog.isSystemPath($0.item.url)
+    }
+    if !systemEntries.isEmpty {
+      if helper.status == .enabled {
+        let helperFailures = await helper.trashSystemItems(systemEntries.map(\.item.url))
+        for entry in systemEntries {
+          if let message = helperFailures[entry.item.url.path] {
+            failures.append("\(entry.item.url.lastPathComponent): \(message)")
+          } else {
+            current.items.removeAll { $0.id == entry.id }
+          }
+        }
+      } else {
+        failures.append(
+          "\(systemEntries.count) system items skipped — enable the ScrubJay helper first.")
+      }
+    }
+
+    for entry in current.items where entry.isSelected && !LeftoverCatalog.isSystemPath(entry.item.url) {
       // Unloading is a behavior change beyond the Trash model: only do it
       // when the agent's own Label carries this app's bundle ID.
       if let agent = entry.item.launchAgent, agent.isLoaded,
