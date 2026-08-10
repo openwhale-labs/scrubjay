@@ -19,6 +19,7 @@ targets:
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 67ULUSQ947
         OTHER_CODE_SIGN_FLAGS: "-i com.openwhale.scrubjay.helper"
+        ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: 6.0
   ScrubJay:
     type: application
@@ -49,4 +50,5 @@ targets:
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 67ULUSQ947
+        ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: 6.0
