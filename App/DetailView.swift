@@ -246,29 +246,46 @@ struct DetailView: View {
 
   private func footer(_ scan: ScanResult, state: AppState) -> some View {
     HStack {
-      // Deliberately leaves `low` untouched when selecting: those are weak
-      // attributions and stay opt-in, one by one. Deselecting clears
-      // everything.
+      // Two honest checkboxes: "recommended" covers the preselection set
+      // (medium and above), "all" really means everything including
+      // loosely matched items.
       Toggle(
-        "Select all",
+        "Select recommended",
         isOn: .init(
           get: {
             guard let scan = state.scan else { return false }
             return scan.appBundleSelected
               && scan.items.filter { $0.item.confidence >= .medium }.allSatisfy(\.isSelected)
           },
-          set: { all in
-            state.scan?.appBundleSelected = all
+          set: { on in
+            state.scan?.appBundleSelected = on
             if let items = state.scan?.items {
-              for index in items.indices
-              where all == false || items[index].item.confidence >= .medium {
-                state.scan?.items[index].isSelected = all
+              for index in items.indices where items[index].item.confidence >= .medium {
+                state.scan?.items[index].isSelected = on
               }
             }
           })
       )
       .toggleStyle(.checkbox)
-      .help("Loosely matched items are never selected in bulk — tick them individually.")
+      .help("The app and every confidently matched leftover — the same set that starts selected.")
+      Toggle(
+        "Select all",
+        isOn: .init(
+          get: {
+            guard let scan = state.scan else { return false }
+            return scan.appBundleSelected && scan.items.allSatisfy(\.isSelected)
+          },
+          set: { on in
+            state.scan?.appBundleSelected = on
+            if let items = state.scan?.items {
+              for index in items.indices {
+                state.scan?.items[index].isSelected = on
+              }
+            }
+          })
+      )
+      .toggleStyle(.checkbox)
+      .help("Everything, including loosely matched items — review those before removing.")
       Text("\(scan.selectedCount) items · \(FileSize.format(scan.selectedSize))")
         .foregroundStyle(.secondary)
         .padding(.leading, 8)
