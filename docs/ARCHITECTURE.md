@@ -49,6 +49,6 @@ Two hazards observed on real machines are handled in the scanner, both biased to
 
 ## Roadmap
 
-1. Developer leftovers: caches for npm/pip/cargo, Xcode DerivedData, simulators.
+1. Developer caches in the app (the engine and CLI cover them already).
 2. System-level roots (`/Library/...`) behind a privileged helper.
 3. Distribution: Developer ID signing, notarization, Sparkle updates.

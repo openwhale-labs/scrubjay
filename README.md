@@ -22,9 +22,10 @@ Pick an app in the sidebar to see everything it would leave behind, grouped by h
 swift run scrubjay apps
 swift run scrubjay scan "Google Chrome"
 swift run scrubjay remove "Some App"
+swift run scrubjay dev
 ```
 
-`scan` reports what would be removed and how confident ScrubJay is about each file; it never deletes anything. `remove` shows the same report, asks for confirmation, and moves the items to the Trash — loosely matched files are excluded unless you lower `--min-confidence` yourself.
+`scan` reports what would be removed and how confident ScrubJay is about each file; it never deletes anything. `remove` shows the same report, asks for confirmation, and moves the items to the Trash — loosely matched files are excluded unless you lower `--min-confidence` yourself. `dev` lists developer caches (npm, pnpm, DerivedData, Homebrew downloads, …) that are safe to clear because everything in them is re-fetched or rebuilt on demand; `dev clean` moves them to the Trash after confirmation.
 
 ## Design
 
