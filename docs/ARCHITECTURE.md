@@ -36,15 +36,20 @@ Matching rules live in `Matcher` and are pure functions with no filesystem acces
 3. **Top-level matching.** Search roots are scanned one level deep. Descending further trades precision for noise.
 4. **`low` is advisory.** Low-confidence results exist to inform the user, never to be acted on automatically.
 
+## Attribution defenses
+
+Two hazards observed on real machines are handled in the scanner, both biased toward missing a file over deleting a wrong one:
+
+- **Channel variants.** `com.google.Chrome.beta.plist` is bundle-ID-prefixed by Chrome but belongs to Chrome Beta. Defense in two layers: any entry that a longer installed bundle ID claims is attributed to that app and excluded from the target's results; and when the sibling app is *not* installed, a channel token (`beta`, `canary`, `dev`, …) right after the bundle ID caps the entry at `low`, so it is reported but never preselected.
+- **Vendor-nested directories.** Chrome's main data lives in `Application Support/Google/Chrome`, one level below a vendor folder. The scanner descends exactly one level, only into a directory named after the app's own vendor (the second component of its bundle ID), and matches children by composing vendor + child against the app name ("Google" + "Chrome" → "Google Chrome"). The vendor directory itself is never a result, and children composing another installed app's name are excluded.
+
 ## Known hazards (open work)
 
-- **Channel variants.** `com.google.Chrome.beta.plist` is bundle-ID-prefixed by Chrome but belongs to Chrome Beta. Fix: when a matched name is itself a prefix-extension of another *installed* app's bundle ID, exclude it.
-- **Vendor-nested directories.** Chrome's main data lives in `Application Support/Google/Chrome`, one level below a vendor folder. Fix: a second-level pass for known vendor-directory patterns, without opening the door to generic recursive matching.
 - **Shared containers.** Group containers can be shared by several apps from one vendor; removing them with the last app only.
 
 ## Roadmap
 
-1. Engine hardening: channel-variant exclusion, vendor-directory pass, running-app detection.
+1. Engine hardening: running-app detection.
 2. `remove` in the CLI: explicit confirmation, trash-only, prints what went where.
 3. SwiftUI app (XcodeGen project), drag-and-drop and list UI.
 4. Login items and launch agents (`SMAppService` + LaunchAgents plists).
