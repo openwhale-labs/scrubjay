@@ -54,7 +54,7 @@ struct ContentView: View {
             sortHeader("Name", bySize: false)
             sortHeader("Size", bySize: true)
           }
-          .padding(.trailing, 8)
+          .padding(.trailing, 16)
           .padding(.bottom, 6)
         }
       }
@@ -93,10 +93,10 @@ struct ContentView: View {
     } label: {
       HStack(spacing: 2) {
         Text(title)
-        if state.sidebarSortBySize == bySize {
-          Image(systemName: state.sidebarSortAscending ? "chevron.up" : "chevron.down")
-            .font(.system(size: 8, weight: .bold))
-        }
+        // Always present so activating a header never shifts the layout.
+        Image(systemName: state.sidebarSortAscending ? "chevron.up" : "chevron.down")
+          .font(.system(size: 8, weight: .bold))
+          .opacity(state.sidebarSortBySize == bySize ? 1 : 0)
       }
       .font(.caption)
       .foregroundStyle(state.sidebarSortBySize == bySize ? .primary : .secondary)
