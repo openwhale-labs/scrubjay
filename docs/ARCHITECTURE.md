@@ -23,9 +23,9 @@ Matching a file to an app is the entire product. Every result carries a confiden
 | Level | Meaning | Example | UI default |
 |---|---|---|---|
 | `certain` | Bundle ID exact, or bundle ID + well-known suffix | `com.google.Chrome.plist` | selected |
-| `high` | Bundle ID prefix, unknown suffix | `com.google.Chrome.helper` | selected |
+| `high` | Bundle ID prefix + recognized helper token | `com.google.Chrome.helper` | selected |
 | `medium` | Exact normalized app-name match | `Google Chrome/` | selected, flagged |
-| `low` | Weak signal (very short names, etc.) | `Arc/` | never preselected |
+| `low` | Weak signal: unknown suffix, channel token, shared group container, very short name | `com.google.Chrome.beta` | never preselected |
 
 Matching rules live in `Matcher` and are pure functions with no filesystem access, so every rule is unit-tested.
 
