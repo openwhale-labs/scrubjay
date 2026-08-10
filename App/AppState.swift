@@ -82,6 +82,9 @@ final class AppState {
     var failures: [String] = []
 
     for entry in current.items where entry.isSelected {
+      if let agent = entry.item.launchAgent, agent.isLoaded {
+        LaunchAgents.unload(label: agent.label)
+      }
       do {
         try Trasher.trash(entry.item.url)
         current.items.removeAll { $0.id == entry.id }

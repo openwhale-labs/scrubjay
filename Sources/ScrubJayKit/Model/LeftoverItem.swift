@@ -10,11 +10,17 @@ public struct LeftoverItem: Sendable, Hashable, Identifiable {
   public let confidence: Confidence
   /// Total allocated size in bytes, when computed.
   public let sizeBytes: Int64?
+  /// Set for launch-agent plists; removal unloads the agent first.
+  public let launchAgent: LaunchAgentInfo?
 
-  public init(url: URL, kind: LeftoverKind, confidence: Confidence, sizeBytes: Int64?) {
+  public init(
+    url: URL, kind: LeftoverKind, confidence: Confidence, sizeBytes: Int64?,
+    launchAgent: LaunchAgentInfo? = nil
+  ) {
     self.url = url
     self.kind = kind
     self.confidence = confidence
     self.sizeBytes = sizeBytes
+    self.launchAgent = launchAgent
   }
 }

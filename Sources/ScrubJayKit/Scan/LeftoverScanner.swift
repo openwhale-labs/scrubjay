@@ -40,7 +40,10 @@ public struct LeftoverScanner: Sendable {
 
     func append(_ url: URL, _ kind: LeftoverKind, _ confidence: Confidence) {
       let size = computeSizes ? FileSize.allocatedSize(at: url) : nil
-      items.append(LeftoverItem(url: url, kind: kind, confidence: confidence, sizeBytes: size))
+      let agent = kind == .launchAgents ? LaunchAgents.info(forPlistAt: url) : nil
+      items.append(
+        LeftoverItem(url: url, kind: kind, confidence: confidence, sizeBytes: size,
+          launchAgent: agent))
     }
 
     for root in roots {

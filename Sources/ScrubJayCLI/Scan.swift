@@ -38,7 +38,10 @@ struct Scan: ParsableCommand {
       print("[\(confidence.label)]")
       for item in group {
         let size = item.sizeBytes.map { "  (\(FileSize.format($0)))" } ?? ""
-        print("  \(item.url.path)\(size)")
+        let agent = item.launchAgent.map {
+          "  [agent \($0.label)\($0.isLoaded ? ", loaded" : "")]"
+        } ?? ""
+        print("  \(item.url.path)\(size)\(agent)")
         total += item.sizeBytes ?? 0
       }
       print("")

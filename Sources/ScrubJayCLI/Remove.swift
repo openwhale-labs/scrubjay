@@ -70,13 +70,26 @@ struct Remove: ParsableCommand {
     }
 
     var failures = 0
-    for url in items.map(\.url) + (leftoversOnly ? [] : [app.bundleURL]) {
+    for item in items {
+      if let agent = item.launchAgent, agent.isLoaded {
+        let unloaded = LaunchAgents.unload(label: agent.label)
+        print("  \(unloaded ? "unloaded" : "still loaded")  \(agent.label)")
+      }
       do {
-        try Trasher.trash(url)
-        print("  trashed  \(url.path)")
+        try Trasher.trash(item.url)
+        print("  trashed  \(item.url.path)")
       } catch {
         failures += 1
-        print("  FAILED   \(url.path): \(error.localizedDescription)")
+        print("  FAILED   \(item.url.path): \(error.localizedDescription)")
+      }
+    }
+    if !leftoversOnly {
+      do {
+        try Trasher.trash(app.bundleURL)
+        print("  trashed  \(app.bundleURL.path)")
+      } catch {
+        failures += 1
+        print("  FAILED   \(app.bundleURL.path): \(error.localizedDescription)")
       }
     }
     if failures > 0 {
