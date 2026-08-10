@@ -21,9 +21,10 @@ Pick an app in the sidebar to see everything it would leave behind, grouped by h
 ```
 swift run scrubjay apps
 swift run scrubjay scan "Google Chrome"
+swift run scrubjay remove "Some App"
 ```
 
-`scan` reports what would be removed and how confident ScrubJay is about each file. It does not delete anything — there is currently no removal command, so exploring is safe.
+`scan` reports what would be removed and how confident ScrubJay is about each file; it never deletes anything. `remove` shows the same report, asks for confirmation, and moves the items to the Trash — loosely matched files are excluded unless you lower `--min-confidence` yourself.
 
 ## Design
 
