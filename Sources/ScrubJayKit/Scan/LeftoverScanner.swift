@@ -8,10 +8,12 @@ public struct LeftoverScanner: Sendable {
     self.roots = roots
   }
 
-  /// Convenience scanner over the current user's Library.
+  /// Convenience scanner over the current user's Library plus the readable
+  /// system-domain roots.
   public static func forCurrentUser() -> LeftoverScanner {
     LeftoverScanner(
-      roots: LeftoverCatalog.userRoots(home: FileManager.default.homeDirectoryForCurrentUser))
+      roots: LeftoverCatalog.userRoots(home: FileManager.default.homeDirectoryForCurrentUser)
+        + LeftoverCatalog.systemRoots())
   }
 
   /// Root kinds where vendors commonly nest per-app data one level down,

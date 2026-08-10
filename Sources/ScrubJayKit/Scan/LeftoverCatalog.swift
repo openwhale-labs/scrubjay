@@ -16,6 +16,8 @@ public enum LeftoverKind: String, Sendable, CaseIterable {
   case applicationScripts = "Application Scripts"
   case cookies = "Cookies"
   case recentDocuments = "Recent Documents"
+  case launchDaemons = "Launch Daemons"
+  case privilegedHelpers = "Privileged Helper Tools"
 }
 
 /// A directory whose top-level entries are matched against an app identity.
@@ -59,5 +61,27 @@ public enum LeftoverCatalog {
         "Application Support/com.apple.sharedfilelist/"
           + "com.apple.LSSharedFileList.ApplicationRecentDocuments"),
     ]
+  }
+
+  /// System-domain roots under /Library. Reading them needs no privileges;
+  /// removing their items goes through the privileged helper.
+  public static func systemRoots() -> [SearchRoot] {
+    func root(_ kind: LeftoverKind, _ path: String) -> SearchRoot {
+      SearchRoot(kind: kind, url: URL(fileURLWithPath: "/Library/\(path)", isDirectory: true))
+    }
+    return [
+      root(.applicationSupport, "Application Support"),
+      root(.caches, "Caches"),
+      root(.preferences, "Preferences"),
+      root(.launchAgents, "LaunchAgents"),
+      root(.launchDaemons, "LaunchDaemons"),
+      root(.privilegedHelpers, "PrivilegedHelperTools"),
+    ]
+  }
+
+  /// True for items that live in the system domain and need the helper to
+  /// remove.
+  public static func isSystemPath(_ url: URL) -> Bool {
+    url.standardizedFileURL.path.hasPrefix("/Library/")
   }
 }
