@@ -63,7 +63,7 @@ Two independent reviews (baseline `0cf12ea`) drove these changes, all landed:
 - Unknown-suffix downgrade, ambiguous-name skip, group-container matching, and the launch-agent Label guard (see attribution defenses above).
 - `Trasher` resolves symlinks before the protected-path check.
 
-Deliberately not changed, pending owner decision: Select all includes `low` items (explicit user action); the chat-app list is curated best-effort rather than fail-closed for every app's Containers; app-layer state-machine tests await an injectable engine boundary.
+Owner rulings (2026-08-10): Select all excludes `low` items — weak attributions stay opt-in, one by one; the chat-app list stays curated best-effort rather than fail-closed. App-layer state-machine tests remain scheduled work, awaiting an injectable engine boundary.
 
 ## Roadmap
 

@@ -7,15 +7,31 @@ import SwiftUI
 struct OrphansView: View {
   @Environment(AppState.self) private var state
   @State private var confirming = false
+  @State private var filter = ""
+
+  /// Indices of orphans passing the current filter.
+  private func filteredIndices(_ orphans: [SelectableItem]) -> [Int] {
+    guard !filter.isEmpty else { return Array(orphans.indices) }
+    return orphans.indices.filter {
+      orphans[$0].item.url.path.localizedCaseInsensitiveContains(filter)
+    }
+  }
 
   var body: some View {
     @Bindable var state = state
     if let orphans = state.orphans {
+      let visible = filteredIndices(orphans)
       let selected = orphans.filter(\.isSelected)
       let selectedSize = selected.compactMap(\.item.sizeBytes).reduce(0, +)
       VStack(spacing: 0) {
         VStack(alignment: .leading, spacing: 4) {
-          Text("Orphaned leftovers").font(.title2.bold())
+          HStack {
+            Text("Orphaned leftovers").font(.title2.bold())
+            Spacer()
+            TextField("Filter", text: $filter)
+              .textFieldStyle(.roundedBorder)
+              .frame(width: 200)
+          }
           Text(
             "Files keyed by bundle identifiers that no installed app claims — usually traces of uninstalled apps. Inspect with the magnifier; nothing is selected for you."
           )
@@ -32,12 +48,26 @@ struct OrphansView: View {
             description: Text("Every bundle-identifier-keyed file belongs to an installed app."))
           Spacer()
         } else {
-          list(orphans: orphans, state: state)
+          list(orphans: orphans, visible: visible, state: state)
         }
         Divider()
         HStack {
+          Toggle(
+            filter.isEmpty ? "Select all" : "Select all filtered",
+            isOn: .init(
+              get: {
+                !visible.isEmpty && visible.allSatisfy { state.orphans?[$0].isSelected ?? false }
+              },
+              set: { all in
+                for index in visible {
+                  state.orphans?[index].isSelected = all
+                }
+              })
+          )
+          .toggleStyle(.checkbox)
           Text("\(selected.count) selected · \(FileSize.format(selectedSize))")
             .foregroundStyle(.secondary)
+            .padding(.leading, 8)
           Spacer()
           Button("Move to Trash…") { confirming = true }
             .keyboardShortcut(.defaultAction)
@@ -60,7 +90,7 @@ struct OrphansView: View {
     }
   }
 
-  private func list(orphans: [SelectableItem], state: AppState) -> some View {
+  private func list(orphans: [SelectableItem], visible: [Int], state: AppState) -> some View {
     List {
       ForEach(
         [
@@ -68,7 +98,7 @@ struct OrphansView: View {
           (Confidence.low, "Vendor apps still installed — often shared tooling"),
         ], id: \.0
       ) { confidence, title in
-        let indices = orphans.indices.filter { orphans[$0].item.confidence == confidence }
+        let indices = visible.filter { orphans[$0].item.confidence == confidence }
         if !indices.isEmpty {
           Section(title) {
             ForEach(indices, id: \.self) { index in

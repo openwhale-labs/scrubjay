@@ -207,23 +207,29 @@ struct DetailView: View {
 
   private func footer(_ scan: ScanResult, state: AppState) -> some View {
     HStack {
+      // Deliberately leaves `low` untouched when selecting: those are weak
+      // attributions and stay opt-in, one by one. Deselecting clears
+      // everything.
       Toggle(
         "Select all",
         isOn: .init(
           get: {
             guard let scan = state.scan else { return false }
-            return scan.appBundleSelected && scan.items.allSatisfy(\.isSelected)
+            return scan.appBundleSelected
+              && scan.items.filter { $0.item.confidence >= .medium }.allSatisfy(\.isSelected)
           },
           set: { all in
             state.scan?.appBundleSelected = all
-            if let count = state.scan?.items.count {
-              for index in 0..<count {
+            if let items = state.scan?.items {
+              for index in items.indices
+              where all == false || items[index].item.confidence >= .medium {
                 state.scan?.items[index].isSelected = all
               }
             }
           })
       )
       .toggleStyle(.checkbox)
+      .help("Loosely matched items are never selected in bulk — tick them individually.")
       Text("\(scan.selectedCount) items · \(FileSize.format(scan.selectedSize))")
         .foregroundStyle(.secondary)
         .padding(.leading, 8)
