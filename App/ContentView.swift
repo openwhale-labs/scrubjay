@@ -29,6 +29,7 @@ struct ContentView: View {
                   if state.runningBundleIDs.contains(app.bundleID) {
                     Circle()
                       .fill(.green)
+                      .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 0.5))
                       .frame(width: 5, height: 5)
                       .help("Running — quit before uninstalling")
                   }
