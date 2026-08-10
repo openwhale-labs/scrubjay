@@ -17,6 +17,8 @@ struct ScanResult {
   var appBundleSize: Int64?
   var items: [SelectableItem]
   var isAppRunning: Bool
+  /// Set when Homebrew installed this app.
+  var caskToken: String?
 
   var selectedCount: Int {
     items.count(where: \.isSelected) + (appBundleSelected ? 1 : 0)
@@ -59,10 +61,12 @@ final class AppState {
     defer { isScanning = false }
 
     let others = apps.map(\.identity)
-    let (items, bundleSize) = await Task.detached {
+    let (items, bundleSize, cask) = await Task.detached {
       let scanner = LeftoverScanner.forCurrentUser()
       let found = scanner.scan(for: app.identity, amongInstalled: others)
-      return (found, FileSize.allocatedSize(at: app.bundleURL))
+      let cask = Homebrew.caskToken(
+        forAppNamed: app.bundleURL.lastPathComponent, in: Homebrew.installedCasks())
+      return (found, FileSize.allocatedSize(at: app.bundleURL), cask)
     }.value
 
     guard app.bundleID == selectedBundleID else { return }
@@ -72,7 +76,8 @@ final class AppState {
       appBundleSize: bundleSize,
       // Preselection is confidence-driven: `low` is never preselected.
       items: items.map { SelectableItem(item: $0, isSelected: $0.confidence >= .medium) },
-      isAppRunning: Self.isRunning(bundleID: app.bundleID)
+      isAppRunning: Self.isRunning(bundleID: app.bundleID),
+      caskToken: cask
     )
   }
 

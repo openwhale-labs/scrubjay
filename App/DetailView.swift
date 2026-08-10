@@ -46,6 +46,15 @@ struct DetailView: View {
           .foregroundStyle(.orange)
           .padding(.top, 4)
       }
+      if let cask = scan.caskToken {
+        Label(
+          "Installed via Homebrew. After removal, run `brew uninstall --cask \(cask)` to clear its records.",
+          systemImage: "shippingbox")
+          .font(.callout)
+          .foregroundStyle(.secondary)
+          .padding(.top, 4)
+          .textSelection(.enabled)
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding()

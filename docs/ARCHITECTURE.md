@@ -49,8 +49,6 @@ Two hazards observed on real machines are handled in the scanner, both biased to
 
 ## Roadmap
 
-1. Login items and launch agents (`SMAppService` + LaunchAgents plists).
-2. Homebrew awareness: detect cask-managed apps, delegate to `brew uninstall --cask`.
-3. Developer leftovers: caches for npm/pip/cargo, Xcode DerivedData, simulators.
-4. System-level roots (`/Library/...`) behind a privileged helper.
-5. Distribution: Developer ID signing, notarization, Sparkle updates.
+1. Developer leftovers: caches for npm/pip/cargo, Xcode DerivedData, simulators.
+2. System-level roots (`/Library/...`) behind a privileged helper.
+3. Distribution: Developer ID signing, notarization, Sparkle updates.
