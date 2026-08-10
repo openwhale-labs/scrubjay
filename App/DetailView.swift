@@ -1,3 +1,4 @@
+import AppKit
 import ScrubJayKit
 import SwiftUI
 
@@ -58,8 +59,8 @@ struct DetailView: View {
           get: { state.scan?.appBundleSelected ?? false },
           set: { state.scan?.appBundleSelected = $0 })
         ) {
-          itemLabel(
-            path: scan.app.bundleURL.path, size: scan.appBundleSize, flagged: false)
+          itemRow(
+            url: scan.app.bundleURL, size: scan.appBundleSize, flagged: false, agent: nil)
         }
       }
       ForEach(Confidence.allCases.reversed(), id: \.self) { confidence in
@@ -71,10 +72,11 @@ struct DetailView: View {
                 get: { state.scan?.items[index].isSelected ?? false },
                 set: { state.scan?.items[index].isSelected = $0 })
               ) {
-                itemLabel(
-                  path: scan.items[index].item.url.path,
+                itemRow(
+                  url: scan.items[index].item.url,
                   size: scan.items[index].item.sizeBytes,
-                  flagged: confidence == .medium)
+                  flagged: confidence == .medium,
+                  agent: scan.items[index].item.launchAgent)
               }
             }
           }
@@ -106,13 +108,31 @@ struct DetailView: View {
     }
   }
 
-  private func itemLabel(path: String, size: Int64?, flagged: Bool) -> some View {
-    HStack {
-      Text(path).lineLimit(1).truncationMode(.middle)
-      if flagged {
-        Image(systemName: "questionmark.circle")
-          .foregroundStyle(.orange)
-          .help("Matched by app name — double-check before removing.")
+  private func itemRow(url: URL, size: Int64?, flagged: Bool, agent: LaunchAgentInfo?) -> some View {
+    HStack(spacing: 8) {
+      Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+        .resizable()
+        .frame(width: 22, height: 22)
+      VStack(alignment: .leading, spacing: 1) {
+        HStack(spacing: 4) {
+          Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle)
+          if flagged {
+            Image(systemName: "questionmark.circle")
+              .foregroundStyle(.orange)
+              .help("Matched by app name — double-check before removing.")
+          }
+          if let agent, agent.isLoaded {
+            Label("active", systemImage: "bolt.fill")
+              .font(.caption)
+              .foregroundStyle(.orange)
+              .help("Launch agent \(agent.label) is loaded; it is unloaded before removal.")
+          }
+        }
+        Text(abbreviatedParent(of: url))
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .lineLimit(1)
+          .truncationMode(.middle)
       }
       Spacer()
       if let size {
@@ -121,6 +141,12 @@ struct DetailView: View {
           .monospacedDigit()
       }
     }
+  }
+
+  private func abbreviatedParent(of url: URL) -> String {
+    let parent = url.deletingLastPathComponent().path
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    return parent.hasPrefix(home) ? "~" + parent.dropFirst(home.count) : parent
   }
 
   private func sectionTitle(_ confidence: Confidence) -> String {
