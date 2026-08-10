@@ -13,7 +13,7 @@ swift run scrubjay apps
 swift run scrubjay scan "Google Chrome"
 ```
 
-`scan` reports what would be removed and how confident ScrubJay is about each file. It does not delete anything.
+`scan` reports what would be removed and how confident ScrubJay is about each file. It does not delete anything — there is currently no removal command, so exploring is safe.
 
 ## Design
 
@@ -23,3 +23,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the engine design, the conf
 
 - macOS 14 or later
 - Swift 6.0 toolchain to build from source
+
+## License
+
+Apache 2.0 with the Commons Clause: use, modify, and redistribute freely; selling ScrubJay, or a product whose value derives substantially from it, is not permitted. See [LICENSE](LICENSE).
