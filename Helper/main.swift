@@ -40,6 +40,11 @@ final class HelperService: NSObject, ScrubJayHelperProtocol {
       }
     }
     reply(failures)
+    // Single-shot: exit after servicing so the next request always runs the
+    // binary currently embedded in the app; launchd respawns on demand.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+      exit(0)
+    }
   }
 
   /// Only proper children of the allowed prefixes. A standardized path has

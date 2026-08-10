@@ -19,9 +19,10 @@ import Foundation
 public enum HelperConstants {
   public static let machServiceName = "com.openwhale.scrubjay.helper"
   public static let plistName = "com.openwhale.scrubjay.helper.plist"
-  public static let version = "1"
+  public static let version = "2"
 
   /// The helper refuses to touch anything outside these prefixes, and never
-  /// the prefix roots themselves.
-  public static let allowedPrefixes = ["/Library/"]
+  /// the prefix roots themselves. /Applications covers root-owned app
+  /// bundles (Tunnelblick installs itself owned by root).
+  public static let allowedPrefixes = ["/Library/", "/Applications/"]
 }

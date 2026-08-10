@@ -250,9 +250,25 @@ final class AppState {
         current.appBundleSelected = false
         current.appBundleSize = nil
         bundleRemoved = true
-        await loadApps()
       } catch {
-        failures.append("\(current.app.bundleURL.lastPathComponent): \(error.localizedDescription)")
+        // Root-owned bundles (Tunnelblick installs itself owned by root)
+        // defeat a user-level trash; the helper can still move them.
+        if helper.status == .enabled {
+          let helperFailures = await helper.trashSystemItems([current.app.bundleURL])
+          if let message = helperFailures[current.app.bundleURL.path] {
+            failures.append("\(current.app.bundleURL.lastPathComponent): \(message)")
+          } else {
+            current.appBundleSelected = false
+            current.appBundleSize = nil
+            bundleRemoved = true
+          }
+        } else {
+          failures.append(
+            "\(current.app.bundleURL.lastPathComponent): \(error.localizedDescription)")
+        }
+      }
+      if bundleRemoved {
+        await loadApps()
       }
     }
 
