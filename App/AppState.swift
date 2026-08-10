@@ -61,6 +61,8 @@ final class AppState {
   var orphans: [SelectableItem]?
   var isScanning = false
   var removalError: String?
+  /// Shown on the placeholder after a completed uninstall.
+  var lastRemovalNote: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
   var runningBundleIDs: Set<String> = []
   /// App bundle file names owned by Homebrew casks, for the sidebar badge.
@@ -125,6 +127,9 @@ final class AppState {
     loadGeneration += 1
     let generation = loadGeneration
     scan = nil
+    if selectedBundleID != nil {
+      lastRemovalNote = nil
+    }
     if selectedBundleID == Self.devCachesSelectionID {
       orphans = nil
       await loadDevCaches(generation: generation)
@@ -187,6 +192,9 @@ final class AppState {
       return
     }
     let generation = loadGeneration
+    let plannedCount = current.selectedCount
+    let plannedSize = current.selectedSize
+    var bundleRemoved = false
     var failures: [String] = []
 
     // System-domain items go through the privileged helper.
@@ -229,19 +237,31 @@ final class AppState {
         try Trasher.trash(current.app.bundleURL)
         current.appBundleSelected = false
         current.appBundleSize = nil
+        bundleRemoved = true
         await loadApps()
       } catch {
         failures.append("\(current.app.bundleURL.lastPathComponent): \(error.localizedDescription)")
       }
     }
 
-    // The user may have moved on while the app list reloaded.
-    guard generation == loadGeneration, current.app.bundleID == selectedBundleID else {
-      removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+    removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+
+    // A completed uninstall returns to the placeholder with a summary; the
+    // app is gone from the sidebar.
+    if bundleRemoved {
+      let count = max(plannedCount - failures.count, 0)
+      lastRemovalNote =
+        "\(current.app.name) moved to the Trash — \(count) items, \(FileSize.format(plannedSize))."
+      if generation == loadGeneration, current.app.bundleID == selectedBundleID {
+        selectedBundleID = nil
+        scan = nil
+      }
       return
     }
+
+    // The user may have moved on while removal ran.
+    guard generation == loadGeneration, current.app.bundleID == selectedBundleID else { return }
     scan = current
-    removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
   }
 
   func loadOrphans(generation: Int? = nil) async {

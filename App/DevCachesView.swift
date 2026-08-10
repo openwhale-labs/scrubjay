@@ -23,14 +23,18 @@ struct DevCachesView: View {
         .padding()
         Divider()
         List {
-          ForEach(caches.indices, id: \.self) { index in
+          ForEach(caches) { cache in
             HStack(spacing: 8) {
               Toggle("", isOn: .init(
-                get: { state.devCaches?[index].isSelected ?? false },
-                set: { state.devCaches?[index].isSelected = $0 }))
+                get: { state.devCaches?.first(where: { $0.id == cache.id })?.isSelected ?? false },
+                set: { value in
+                  guard let index = state.devCaches?.firstIndex(where: { $0.id == cache.id })
+                  else { return }
+                  state.devCaches?[index].isSelected = value
+                }))
                 .labelsHidden()
                 .toggleStyle(.checkbox)
-              cacheRow(caches[index].status)
+              cacheRow(cache.status)
             }
           }
         }

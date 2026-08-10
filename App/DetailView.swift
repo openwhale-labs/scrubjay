@@ -139,20 +139,20 @@ struct DetailView: View {
       }
       if sortBySize {
         Section("Leftovers — largest first") {
-          let order = scan.items.indices.sorted {
-            (scan.items[$0].item.sizeBytes ?? 0) > (scan.items[$1].item.sizeBytes ?? 0)
+          let ordered = scan.items.sorted {
+            ($0.item.sizeBytes ?? 0) > ($1.item.sizeBytes ?? 0)
           }
-          ForEach(order, id: \.self) { index in
-            leftoverRow(index, scan: scan, state: state, showConfidence: true)
+          ForEach(ordered) { entry in
+            leftoverRow(entry, state: state, showConfidence: true)
           }
         }
       } else {
         ForEach(Confidence.allCases.reversed(), id: \.self) { confidence in
-          let indices = scan.items.indices.filter { scan.items[$0].item.confidence == confidence }
-          if !indices.isEmpty {
+          let group = scan.items.filter { $0.item.confidence == confidence }
+          if !group.isEmpty {
             Section(sectionTitle(confidence)) {
-              ForEach(indices, id: \.self) { index in
-                leftoverRow(index, scan: scan, state: state, showConfidence: false)
+              ForEach(group) { entry in
+                leftoverRow(entry, state: state, showConfidence: false)
               }
             }
           }
@@ -161,14 +161,23 @@ struct DetailView: View {
     }
   }
 
+  /// Selection is bound by item identity, never by array index: the items
+  /// array shrinks during removal, and a stale index would trap.
+  private func selectionBinding(for id: URL, state: AppState) -> Binding<Bool> {
+    .init(
+      get: { state.scan?.items.first(where: { $0.id == id })?.isSelected ?? false },
+      set: { value in
+        guard let index = state.scan?.items.firstIndex(where: { $0.id == id }) else { return }
+        state.scan?.items[index].isSelected = value
+      })
+  }
+
   private func leftoverRow(
-    _ index: Int, scan: ScanResult, state: AppState, showConfidence: Bool
+    _ entry: SelectableItem, state: AppState, showConfidence: Bool
   ) -> some View {
-    let item = scan.items[index].item
+    let item = entry.item
     return row(
-      isOn: .init(
-        get: { state.scan?.items[index].isSelected ?? false },
-        set: { state.scan?.items[index].isSelected = $0 }),
+      isOn: selectionBinding(for: entry.id, state: state),
       url: item.url, size: item.sizeBytes,
       flagged: !showConfidence && item.confidence == .medium,
       agent: item.launchAgent,

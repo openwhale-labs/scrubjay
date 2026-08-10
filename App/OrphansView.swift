@@ -9,18 +9,26 @@ struct OrphansView: View {
   @State private var confirming = false
   @State private var filter = ""
 
-  /// Indices of orphans passing the current filter.
-  private func filteredIndices(_ orphans: [SelectableItem]) -> [Int] {
-    guard !filter.isEmpty else { return Array(orphans.indices) }
-    return orphans.indices.filter {
-      orphans[$0].item.url.path.localizedCaseInsensitiveContains(filter)
-    }
+  /// Orphans passing the current filter. Selection is bound by identity,
+  /// never by index — the array shrinks after removal.
+  private func visibleItems(_ orphans: [SelectableItem]) -> [SelectableItem] {
+    guard !filter.isEmpty else { return orphans }
+    return orphans.filter { $0.item.url.path.localizedCaseInsensitiveContains(filter) }
+  }
+
+  private func selectionBinding(for id: URL) -> Binding<Bool> {
+    .init(
+      get: { state.orphans?.first(where: { $0.id == id })?.isSelected ?? false },
+      set: { value in
+        guard let index = state.orphans?.firstIndex(where: { $0.id == id }) else { return }
+        state.orphans?[index].isSelected = value
+      })
   }
 
   var body: some View {
     @Bindable var state = state
     if let orphans = state.orphans {
-      let visible = filteredIndices(orphans)
+      let visible = visibleItems(orphans)
       let selected = orphans.filter(\.isSelected)
       let selectedSize = selected.compactMap(\.item.sizeBytes).reduce(0, +)
       VStack(spacing: 0) {
@@ -55,11 +63,17 @@ struct OrphansView: View {
             filter.isEmpty ? "Select all" : "Select all filtered",
             isOn: .init(
               get: {
-                !visible.isEmpty && visible.allSatisfy { state.orphans?[$0].isSelected ?? false }
+                !visible.isEmpty
+                  && visible.allSatisfy { entry in
+                    state.orphans?.first(where: { $0.id == entry.id })?.isSelected ?? false
+                  }
               },
               set: { all in
-                for index in visible {
-                  state.orphans?[index].isSelected = all
+                let ids = Set(visible.map(\.id))
+                if let orphans = state.orphans {
+                  for index in orphans.indices where ids.contains(orphans[index].id) {
+                    state.orphans?[index].isSelected = all
+                  }
                 }
               })
           )
@@ -89,7 +103,9 @@ struct OrphansView: View {
     }
   }
 
-  private func list(orphans: [SelectableItem], visible: [Int], state: AppState) -> some View {
+  private func list(orphans: [SelectableItem], visible: [SelectableItem], state: AppState)
+    -> some View
+  {
     List {
       ForEach(
         [
@@ -97,11 +113,11 @@ struct OrphansView: View {
           (Confidence.low, "Vendor apps still installed — often shared tooling"),
         ], id: \.0
       ) { confidence, title in
-        let indices = visible.filter { orphans[$0].item.confidence == confidence }
-        if !indices.isEmpty {
+        let group = visible.filter { $0.item.confidence == confidence }
+        if !group.isEmpty {
           Section(title) {
-            ForEach(indices, id: \.self) { index in
-              orphanRow(index, orphans: orphans, state: state)
+            ForEach(group) { entry in
+              orphanRow(entry)
             }
           }
         }
@@ -109,14 +125,10 @@ struct OrphansView: View {
     }
   }
 
-  private func orphanRow(
-    _ index: Int, orphans: [SelectableItem], state: AppState
-  ) -> some View {
-    let item = orphans[index].item
+  private func orphanRow(_ entry: SelectableItem) -> some View {
+    let item = entry.item
     return HStack(spacing: 8) {
-      Toggle("", isOn: .init(
-        get: { state.orphans?[index].isSelected ?? false },
-        set: { state.orphans?[index].isSelected = $0 }))
+      Toggle("", isOn: selectionBinding(for: entry.id))
         .labelsHidden()
         .toggleStyle(.checkbox)
       Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))

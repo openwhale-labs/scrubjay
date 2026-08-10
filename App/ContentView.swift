@@ -69,6 +69,10 @@ struct ContentView: View {
         ProgressView("Scanning…")
       } else if state.scan != nil {
         DetailView()
+      } else if let note = state.lastRemovalNote {
+        ContentUnavailableView(
+          "Moved to Trash", systemImage: "checkmark.circle",
+          description: Text(note + " Restore anytime from the Trash."))
       } else {
         ContentUnavailableView(
           "Select an app", systemImage: "sparkles",
