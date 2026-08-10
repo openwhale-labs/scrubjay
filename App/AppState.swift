@@ -50,6 +50,10 @@ final class AppState {
   var apps: [InstalledApp] = []
   var query = ""
   var selectedBundleID: String?
+  /// Monotonic token: every selection change starts a new generation, and
+  /// only the newest generation may publish results or clear the spinner —
+  /// a stale scan must never be shown for (or removed as) the current app.
+  private var loadGeneration = 0
   var scan: ScanResult?
   var devCaches: [SelectableCache]?
   var orphans: [SelectableItem]?
@@ -116,26 +120,25 @@ final class AppState {
   }
 
   func scanSelectedApp() async {
+    loadGeneration += 1
+    let generation = loadGeneration
+    scan = nil
     if selectedBundleID == Self.devCachesSelectionID {
-      scan = nil
       orphans = nil
-      await loadDevCaches()
+      await loadDevCaches(generation: generation)
       return
     }
     if selectedBundleID == Self.orphansSelectionID {
-      scan = nil
       devCaches = nil
-      await loadOrphans()
+      await loadOrphans(generation: generation)
       return
     }
     devCaches = nil
     orphans = nil
     guard let app = apps.first(where: { $0.bundleID == selectedBundleID }) else {
-      scan = nil
       return
     }
     isScanning = true
-    defer { isScanning = false }
 
     let others = apps.map(\.identity)
     let (items, bundleSize, cask) = await Task.detached {
@@ -146,7 +149,8 @@ final class AppState {
       return (found, FileSize.allocatedSize(at: app.bundleURL), cask)
     }.value
 
-    guard app.bundleID == selectedBundleID else { return }
+    guard generation == loadGeneration else { return }
+    isScanning = false
     refreshRunningApps()
     let sensitive = SensitiveApps.holdsChatHistory(bundleID: app.bundleID)
     scan = ScanResult(
@@ -172,10 +176,22 @@ final class AppState {
   /// Move the selected items (and optionally the app bundle) to the Trash.
   func removeSelected() async {
     guard var current = scan else { return }
+    // The removal plan must belong to the app the sidebar shows right now,
+    // and Apple applications are never removed — same policy as the CLI.
+    guard current.app.bundleID == selectedBundleID else { return }
+    guard !current.app.isAppleApp else {
+      removalError = "Apple applications cannot be removed."
+      return
+    }
+    let generation = loadGeneration
     var failures: [String] = []
 
     for entry in current.items where entry.isSelected {
-      if let agent = entry.item.launchAgent, agent.isLoaded {
+      // Unloading is a behavior change beyond the Trash model: only do it
+      // when the agent's own Label carries this app's bundle ID.
+      if let agent = entry.item.launchAgent, agent.isLoaded,
+        agent.belongsTo(bundleID: current.app.bundleID)
+      {
         LaunchAgents.unload(label: agent.label)
       }
       do {
@@ -196,19 +212,25 @@ final class AppState {
       }
     }
 
+    // The user may have moved on while the app list reloaded.
+    guard generation == loadGeneration, current.app.bundleID == selectedBundleID else {
+      removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+      return
+    }
     scan = current
     removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
   }
 
-  func loadOrphans() async {
+  func loadOrphans(generation: Int? = nil) async {
+    let generation = generation ?? loadGeneration
     isScanning = true
-    defer { isScanning = false }
     let installed = apps.map(\.identity)
     let found = await Task.detached {
       OrphanScanner.forCurrentUser()
         .scan(installed: installed + AppInventory.auxiliaryIdentities())
     }.value
-    guard selectedBundleID == Self.orphansSelectionID else { return }
+    guard generation == loadGeneration, selectedBundleID == Self.orphansSelectionID else { return }
+    isScanning = false
     // Orphans are never preselected.
     orphans = found.map { SelectableItem(item: $0, isSelected: false) }
   }
@@ -228,11 +250,14 @@ final class AppState {
     await loadOrphans()
   }
 
-  func loadDevCaches() async {
+  func loadDevCaches(generation: Int? = nil) async {
+    let generation = generation ?? loadGeneration
     isScanning = true
-    defer { isScanning = false }
     let present = await Task.detached { DevCaches.present() }.value
-    guard selectedBundleID == Self.devCachesSelectionID else { return }
+    guard generation == loadGeneration, selectedBundleID == Self.devCachesSelectionID else {
+      return
+    }
+    isScanning = false
     devCaches = present
       .sorted { ($0.sizeBytes ?? 0) > ($1.sizeBytes ?? 0) }
       .map { SelectableCache(status: $0, isSelected: false) }
@@ -258,6 +283,9 @@ final class AppState {
   /// cannot be identified or is not in the inventory yet.
   func selectApp(at url: URL) -> Bool {
     guard let bundleID = Bundle(url: url)?.bundleIdentifier else { return false }
+    // Same protection as everywhere else: Apple applications are off-limits,
+    // including ones dragged in from /System/Applications.
+    guard !bundleID.hasPrefix("com.apple.") else { return false }
     if !apps.contains(where: { $0.bundleID == bundleID }) {
       // An app from a location the inventory does not cover (e.g. a DMG).
       guard let app = AppInventory.readBundle(at: url) else { return false }

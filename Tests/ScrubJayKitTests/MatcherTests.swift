@@ -18,8 +18,32 @@ struct MatcherTests {
       Matcher.match(entryName: "com.google.Chrome.binarycookies", identity: chrome) == .certain)
   }
 
-  @Test func bundleIDWithUnknownSuffixIsHigh() {
+  @Test func helperSuffixIsHigh() {
     #expect(Matcher.match(entryName: "com.google.Chrome.helper", identity: chrome) == .high)
+    #expect(
+      Matcher.match(
+        entryName: "com.google.Chrome.app.fmgjjmmmlfnkbppncabfkddbjimcfncm.plist",
+        identity: chrome) == .high)
+  }
+
+  @Test func unknownSuffixIsLow() {
+    // Could be an uninstalled sibling product sharing the prefix — never
+    // worth preselecting.
+    #expect(
+      Matcher.match(entryName: "com.google.Chrome.LicenseManager", identity: chrome) == .low)
+  }
+
+  @Test func groupContainerMatching() {
+    #expect(
+      Matcher.matchGroupContainer(
+        entryName: "5A4RE8SF68.com.google.Chrome", identity: chrome) == .low)
+    #expect(
+      Matcher.matchGroupContainer(
+        entryName: "UBF8T346G9.group.com.google.Chrome.shared", identity: chrome) == .low)
+    #expect(
+      Matcher.matchGroupContainer(
+        entryName: "5A4RE8SF68.com.tencent.xinWeChat", identity: chrome) == nil)
+    #expect(Matcher.matchGroupContainer(entryName: "NoDotsHere", identity: chrome) == nil)
   }
 
   @Test func channelSuffixIsDowngradedToLow() {

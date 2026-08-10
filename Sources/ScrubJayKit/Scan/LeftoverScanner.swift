@@ -56,8 +56,23 @@ public struct LeftoverScanner: Sendable {
       }
       for entry in entries {
         let name = entry.lastPathComponent
+        // Group Containers use team-ID-prefixed names and can be shared
+        // between a vendor's apps — dedicated matching, always `low`.
+        if root.kind == .groupContainers {
+          if let confidence = Matcher.matchGroupContainer(entryName: name, identity: identity),
+            !claimedByRival(name, target: identity, rivals: rivals)
+          {
+            append(entry, root.kind, confidence)
+          }
+          continue
+        }
         if let confidence = Matcher.match(entryName: name, identity: identity) {
-          if !claimedByRival(name, target: identity, rivals: rivals) {
+          // A name-based match that also name-matches another installed app
+          // is ambiguous — leave it alone.
+          let ambiguous =
+            Matcher.nameMatches(entryName: name, identity: identity)
+            && rivals.contains { Matcher.nameMatches(entryName: name, identity: $0) }
+          if !ambiguous, !claimedByRival(name, target: identity, rivals: rivals) {
             append(entry, root.kind, confidence)
           }
           continue

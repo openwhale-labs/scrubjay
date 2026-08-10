@@ -42,6 +42,16 @@ public enum Matcher {
     "beta", "canary", "dev", "nightly", "alpha", "preview", "insiders",
   ]
 
+  /// Suffix tokens that denote an app's own auxiliary pieces (helpers,
+  /// updaters, web-app shortcuts). Only these earn `high` after a bundle-ID
+  /// prefix; an unrecognized suffix could equally be a sibling product that
+  /// is not installed, so it stays at `low`.
+  private static let helperTokens: Set<String> = [
+    "helper", "helpers", "renderer", "plugin", "plugins", "agent", "agents",
+    "updater", "shipit", "app", "web", "service", "services", "extension",
+    "extensions", "widget", "widgets",
+  ]
+
   /// Decide whether a directory entry belongs to the app.
   ///
   /// - Parameter entryName: the last path component of a candidate file or
@@ -60,14 +70,17 @@ public enum Matcher {
       if knownSuffixes.contains(suffix) {
         return .certain
       }
-      // A channel token right after the bundle ID usually denotes a sibling
-      // app (Chrome Beta, VS Code Insiders). Report, but never preselect.
-      if let firstToken = suffix.split(separator: ".").first,
-        channelTokens.contains(String(firstToken))
-      {
+      guard let firstToken = suffix.split(separator: ".").first.map(String.init) else {
         return .low
       }
-      return .high
+      // A channel token right after the bundle ID usually denotes a sibling
+      // app (Chrome Beta, VS Code Insiders). Report, but never preselect.
+      if channelTokens.contains(firstToken) {
+        return .low
+      }
+      // Recognized helper pieces belong to the app; anything else could be
+      // an uninstalled sibling product sharing the prefix.
+      return helperTokens.contains(firstToken) ? .high : .low
     }
 
     // Name matches. Normalization strips separators so that
@@ -85,6 +98,34 @@ public enum Matcher {
     }
 
     return nil
+  }
+
+  /// Match a Group Containers entry. Real entries are `TEAMID.<suffix>`
+  /// (`5A4RE8SF68.com.tencent.xinWeChat`, `UBF8T346G9.group.com.microsoft.shared`),
+  /// so the team-ID label is stripped before comparing. Group containers can
+  /// be shared between a vendor's apps, so the result is always `low` —
+  /// reported, never preselected.
+  public static func matchGroupContainer(entryName: String, identity: AppIdentity) -> Confidence? {
+    let entry = entryName.lowercased()
+    let bundleID = identity.bundleID.lowercased()
+    let labels = entry.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)
+    guard labels.count == 2 else { return nil }
+    var candidates = [String(labels[1])]
+    if candidates[0].hasPrefix("group.") {
+      candidates.append(String(candidates[0].dropFirst("group.".count)))
+    }
+    for candidate in candidates
+    where candidate == bundleID || candidate.hasPrefix(bundleID + ".") {
+      return .low
+    }
+    return nil
+  }
+
+  /// True when the entry name-matches the identity (as opposed to matching
+  /// via its bundle identifier).
+  public static func nameMatches(entryName: String, identity: AppIdentity) -> Bool {
+    let normalizedEntry = normalize(entryName)
+    return identity.allNames.contains { normalize($0) == normalizedEntry }
   }
 
   /// Match a child entry inside a vendor directory, e.g. `Chrome` inside

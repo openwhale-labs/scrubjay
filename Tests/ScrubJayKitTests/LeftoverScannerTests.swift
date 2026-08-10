@@ -52,6 +52,9 @@ struct LeftoverScannerTests {
       "Library/Application Support/com.apple.sharedfilelist/"
         + "com.apple.LSSharedFileList.ApplicationRecentDocuments/com.google.Chrome.sfl4",
       file: true)
+    // Group container with a team-ID prefix.
+    try create("Library/Group Containers/5A4RE8SF68.com.google.Chrome")
+    try create("Library/Group Containers/UBF8T346G9.com.microsoft.teams")
     // Unrelated.
     try create("Library/Caches/org.mozilla.firefox")
     try create("Library/Preferences/com.google.Chromecast.plist", file: true)
@@ -74,19 +77,39 @@ struct LeftoverScannerTests {
       Set(paths) == [
         "Google Chrome", "com.google.Chrome", "com.google.Chrome.plist",
         "com.google.Chrome.savedState", "Chrome", "com.google.Chrome.agent.plist",
-        "com.google.Chrome.sfl4",
+        "com.google.Chrome.sfl4", "5A4RE8SF68.com.google.Chrome",
       ])
-    #expect(items.count == 8)  // com.google.Chrome appears in two roots
+    #expect(items.count == 9)  // com.google.Chrome appears in two roots
+
+    // Group containers can be shared within a vendor: always low.
+    let belowMedium = items.filter { $0.confidence < .medium }
+    #expect(belowMedium.map { $0.url.lastPathComponent } == ["5A4RE8SF68.com.google.Chrome"])
 
     // The launch agent carries its parsed label; a fixture label is never
     // loaded in the real launchd domain.
     let agentItem = items.first { $0.url.lastPathComponent == "com.google.Chrome.agent.plist" }
     #expect(agentItem?.launchAgent == LaunchAgentInfo(
       label: "com.google.Chrome.agent", isLoaded: false))
-    #expect(items.allSatisfy { $0.confidence >= .medium })
-    // Sorted by confidence, certain first.
+    #expect(agentItem?.launchAgent?.belongsTo(bundleID: "com.google.Chrome") == true)
+    #expect(agentItem?.launchAgent?.belongsTo(bundleID: "com.google.Chromecast") == false)
+    // Sorted by confidence, certain first; the shared group container ranks last.
     #expect(items.first?.confidence == .certain)
-    #expect(items.last?.confidence == .medium)
+    #expect(items.last?.confidence == .low)
+  }
+
+  @Test func ambiguousNameMatchIsSkipped() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    // Two installed apps both known as "Google Chrome" by name: the
+    // name-keyed directory cannot be attributed and is left alone.
+    let impostor = AppIdentity(bundleID: "com.example.Impostor", name: "Google Chrome")
+    let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
+    let items = scanner.scan(
+      for: chrome, amongInstalled: [chrome, chromeBeta, impostor], computeSizes: false)
+    #expect(!items.contains { $0.url.lastPathComponent == "Google Chrome" })
+    // Bundle-ID matches are unaffected.
+    #expect(items.contains { $0.url.lastPathComponent == "com.google.Chrome.plist" })
   }
 
   @Test func vendorNestedChildIsFoundButSiblingsAreNot() throws {

@@ -19,6 +19,8 @@ public enum SensitiveApps {
     "com.larksuite.larkApp",  // Lark
     "com.tencent.WeWorkMac",  // 企业微信 WeCom
     "com.alibaba.DingTalkMac",  // 钉钉
+    "com.microsoft.teams",
+    "com.microsoft.teams2",
   ]
 
   /// Kinds that hold user data (as opposed to regenerable caches) for a

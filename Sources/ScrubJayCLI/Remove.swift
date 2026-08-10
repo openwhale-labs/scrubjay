@@ -25,6 +25,11 @@ struct Remove: ParsableCommand {
   @Flag(name: .long, help: "Skip the confirmation prompt.")
   var yes = false
 
+  @Flag(
+    name: .customLong("include-chat-data"),
+    help: "For messaging apps, also remove data folders that hold chat history.")
+  var includeChatData = false
+
   func run() throws {
     let apps = AppInventory.discoverApps()
     let app = try resolveApp(query: query, among: apps)
@@ -39,8 +44,23 @@ struct Remove: ParsableCommand {
     }
 
     let scanner = LeftoverScanner.forCurrentUser()
-    let items = scanner.scan(for: app.identity, amongInstalled: apps.map(\.identity))
+    var items = scanner.scan(for: app.identity, amongInstalled: apps.map(\.identity))
       .filter { $0.confidence >= minConfidence }
+    // Chat history is irreplaceable: for messaging apps, data folders stay
+    // unless explicitly included.
+    if SensitiveApps.holdsChatHistory(bundleID: app.bundleID), !includeChatData {
+      let skipped = items.filter { SensitiveApps.dataKinds.contains($0.kind) }
+      items.removeAll { SensitiveApps.dataKinds.contains($0.kind) }
+      if !skipped.isEmpty {
+        print(
+          "Keeping \(skipped.count) data folders that may hold chat history "
+            + "(pass --include-chat-data to remove them):")
+        for item in skipped {
+          print("  kept  \(item.url.path)")
+        }
+        print("")
+      }
+    }
 
     var total = items.compactMap(\.sizeBytes).reduce(0, +)
     print("\(app.name) (\(app.bundleID))\n")
@@ -71,7 +91,7 @@ struct Remove: ParsableCommand {
 
     var failures = 0
     for item in items {
-      if let agent = item.launchAgent, agent.isLoaded {
+      if let agent = item.launchAgent, agent.isLoaded, agent.belongsTo(bundleID: app.bundleID) {
         let unloaded = LaunchAgents.unload(label: agent.label)
         print("  \(unloaded ? "unloaded" : "still loaded")  \(agent.label)")
       }

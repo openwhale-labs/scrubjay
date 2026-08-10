@@ -10,8 +10,10 @@ public enum Trasher {
   }
 
   /// Paths that must never be trashed, even if matching logic goes wrong.
+  /// Symlinks are resolved first so a link cannot smuggle a protected
+  /// target past the check.
   static func isProtected(_ url: URL) -> Bool {
-    let path = url.standardizedFileURL.path
+    let path = url.standardizedFileURL.resolvingSymlinksInPath().path
     let home = FileManager.default.homeDirectoryForCurrentUser.standardizedFileURL.path
     let protected: Set<String> = [
       "/", home,

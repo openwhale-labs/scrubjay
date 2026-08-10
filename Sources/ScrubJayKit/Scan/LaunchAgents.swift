@@ -11,6 +11,16 @@ public struct LaunchAgentInfo: Sendable, Hashable {
     self.label = label
     self.isLoaded = isLoaded
   }
+
+  /// Whether the agent's Label belongs to the given app. Unloading is a
+  /// behavior change beyond the Trash model, so it only happens when the
+  /// Label itself carries the app's bundle identifier — a matched *file
+  /// name* is not enough.
+  public func belongsTo(bundleID: String) -> Bool {
+    let label = label.lowercased()
+    let bundleID = bundleID.lowercased()
+    return label == bundleID || label.hasPrefix(bundleID + ".")
+  }
 }
 
 /// Reads and unloads user launch agents. Trashing an agent's plist alone is
