@@ -15,7 +15,8 @@ struct Orphans: ParsableCommand {
   var noSizes = false
 
   func run() throws {
-    let installed = AppInventory.discoverApps().map(\.identity)
+    let installed =
+      AppInventory.discoverApps().map(\.identity) + AppInventory.auxiliaryIdentities()
     let items = OrphanScanner.forCurrentUser().scan(installed: installed, computeSizes: !noSizes)
     guard !items.isEmpty else {
       print("No orphaned leftovers found.")

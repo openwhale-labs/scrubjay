@@ -205,7 +205,8 @@ final class AppState {
     defer { isScanning = false }
     let installed = apps.map(\.identity)
     let found = await Task.detached {
-      OrphanScanner.forCurrentUser().scan(installed: installed)
+      OrphanScanner.forCurrentUser()
+        .scan(installed: installed + AppInventory.auxiliaryIdentities())
     }.value
     guard selectedBundleID == Self.orphansSelectionID else { return }
     // Orphans are never preselected.

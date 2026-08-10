@@ -49,6 +49,48 @@ struct OrphanScannerTests {
     #expect(byName["com.google.Keep"]?.confidence == .low)
   }
 
+  @Test func auxiliaryBundlesClaimTheirFiles() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    // An input method lives outside /Applications but is alive.
+    try FileManager.default.createDirectory(
+      at: home.appendingPathComponent("Library/Caches/com.doubao.ime"),
+      withIntermediateDirectories: true)
+    let imeDir = home.appendingPathComponent("Input Methods/FakeIme.app/Contents")
+    try FileManager.default.createDirectory(at: imeDir, withIntermediateDirectories: true)
+    let plist = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
+      "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0"><dict>
+      <key>CFBundleIdentifier</key><string>com.doubao.ime</string>
+      <key>CFBundleName</key><string>FakeIme</string>
+      </dict></plist>
+      """
+    try plist.data(using: .utf8)!.write(to: imeDir.appendingPathComponent("Info.plist"))
+
+    let aux = AppInventory.auxiliaryIdentities(
+      in: [home.appendingPathComponent("Input Methods")])
+    #expect(aux.map(\.bundleID) == ["com.doubao.ime"])
+
+    let items = scanner(home).scan(installed: [chrome] + aux, computeSizes: false)
+    #expect(!items.contains { $0.url.lastPathComponent == "com.doubao.ime" })
+  }
+
+  @Test func frameworkServicesRankAsSharedTooling() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    try FileManager.default.createDirectory(
+      at: home.appendingPathComponent("Library/Caches/org.sparkle-project.DownloaderService"),
+      withIntermediateDirectories: true)
+
+    let items = scanner(home).scan(installed: [chrome], computeSizes: false)
+    let sparkle = items.first {
+      $0.url.lastPathComponent == "org.sparkle-project.DownloaderService"
+    }
+    #expect(sparkle?.confidence == .low)
+  }
+
   @Test func bundleIDStemParsing() {
     #expect(Matcher.bundleIDStem(of: "com.foo.Bar.plist") == "com.foo.bar")
     #expect(Matcher.bundleIDStem(of: "com.foo.Bar.savedState") == "com.foo.bar")

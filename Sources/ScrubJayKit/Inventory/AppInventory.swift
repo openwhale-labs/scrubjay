@@ -46,6 +46,40 @@ public enum AppInventory {
     return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
   }
 
+  /// Places where live, app-like bundles exist outside the Applications
+  /// folders: input methods, preference panes, screen savers, QuickLook and
+  /// Spotlight plugins. Their files must never be mistaken for orphans.
+  public static func auxiliaryBundleDirectories() -> [URL] {
+    let home = FileManager.default.homeDirectoryForCurrentUser
+    let subpaths = [
+      "Input Methods", "PreferencePanes", "Screen Savers", "QuickLook", "Spotlight",
+    ]
+    return subpaths.flatMap { sub in
+      [
+        URL(fileURLWithPath: "/Library/\(sub)", isDirectory: true),
+        home.appendingPathComponent("Library/\(sub)", isDirectory: true),
+      ]
+    }
+  }
+
+  /// Identities of auxiliary bundles (any bundle type with an Info.plist).
+  /// These claim leftovers in the orphan scan but are not listed as
+  /// uninstallable apps.
+  public static func auxiliaryIdentities(in directories: [URL]? = nil) -> [AppIdentity] {
+    let fm = FileManager.default
+    var identities: [AppIdentity] = []
+    for directory in directories ?? auxiliaryBundleDirectories() {
+      let entries = (try? fm.contentsOfDirectory(
+        at: directory, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+      for entry in entries {
+        if let app = readBundle(at: entry) {
+          identities.append(app.identity)
+        }
+      }
+    }
+    return identities
+  }
+
   /// Read a single app bundle, e.g. one dropped onto the window.
   public static func readBundle(at url: URL) -> InstalledApp? {
     guard let bundle = Bundle(url: url), let bundleID = bundle.bundleIdentifier else {

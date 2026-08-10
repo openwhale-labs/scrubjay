@@ -13,6 +13,10 @@ public struct OrphanScanner: Sendable {
     self.roots = roots
   }
 
+  /// Bundle-ID prefixes of frameworks whose services run embedded inside
+  /// installed apps.
+  static let frameworkServicePrefixes: [String] = ["org.sparkle-project."]
+
   /// Group Containers are excluded: their team-ID-prefixed names cannot be
   /// matched to bundle identifiers with confidence.
   public static func forCurrentUser() -> OrphanScanner {
@@ -50,11 +54,16 @@ public struct OrphanScanner: Sendable {
         let vendorStillPresent = installed.contains {
           $0.bundleID.lowercased().hasPrefix(vendorPrefix)
         }
+        // Framework services (Sparkle's updater XPC, …) ship embedded in
+        // many installed apps; their files rank with shared tooling.
+        let isFrameworkService = Self.frameworkServicePrefixes.contains {
+          stem.hasPrefix($0)
+        }
         let size = computeSizes ? FileSize.allocatedSize(at: entry) : nil
         items.append(
           LeftoverItem(
             url: entry, kind: root.kind,
-            confidence: vendorStillPresent ? .low : .medium,
+            confidence: (vendorStillPresent || isFrameworkService) ? .low : .medium,
             sizeBytes: size))
       }
     }
