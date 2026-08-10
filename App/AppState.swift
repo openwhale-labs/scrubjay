@@ -43,26 +43,57 @@ struct SelectableCache: Identifiable {
 @MainActor
 @Observable
 final class AppState {
-  /// Sidebar sentinel for the developer-caches pane.
+  /// Sidebar sentinels for the tool panes.
   static let devCachesSelectionID = "scrubjay.dev-caches"
+  static let orphansSelectionID = "scrubjay.orphans"
 
   var apps: [InstalledApp] = []
   var query = ""
   var selectedBundleID: String?
   var scan: ScanResult?
   var devCaches: [SelectableCache]?
+  var orphans: [SelectableItem]?
   var isScanning = false
   var removalError: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
   var runningBundleIDs: Set<String> = []
   /// App bundle file names owned by Homebrew casks, for the sidebar badge.
   var caskAppNames: Set<String> = []
+  /// App bundle sizes, computed in the background after the list loads.
+  var appSizes: [String: Int64] = [:]
+  /// Sidebar ordering: which key, and whether ascending. Clicking the active
+  /// key in the UI flips the direction.
+  var sidebarSortBySize = false
+  var sidebarSortAscending = true
 
   var filteredApps: [InstalledApp] {
-    guard !query.isEmpty else { return apps }
-    return apps.filter {
-      $0.name.localizedCaseInsensitiveContains(query)
-        || $0.bundleID.localizedCaseInsensitiveContains(query)
+    var result = apps
+    if !query.isEmpty {
+      result = result.filter {
+        $0.name.localizedCaseInsensitiveContains(query)
+          || $0.bundleID.localizedCaseInsensitiveContains(query)
+      }
+    }
+    if sidebarSortBySize {
+      result.sort {
+        let lhs = appSizes[$0.bundleID] ?? -1
+        let rhs = appSizes[$1.bundleID] ?? -1
+        return sidebarSortAscending ? lhs < rhs : lhs > rhs
+      }
+    } else if !sidebarSortAscending {
+      result.reverse()
+    }
+    return result
+  }
+
+  /// Sort-header click: a new key starts at its natural direction
+  /// (name A→Z, size largest first); clicking the active key flips it.
+  func selectSidebarSort(bySize: Bool) {
+    if sidebarSortBySize == bySize {
+      sidebarSortAscending.toggle()
+    } else {
+      sidebarSortBySize = bySize
+      sidebarSortAscending = !bySize
     }
   }
 
@@ -71,6 +102,13 @@ final class AppState {
     caskAppNames = Set(
       await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
     refreshRunningApps()
+    let snapshot = apps
+    appSizes = await Task.detached {
+      Dictionary(
+        uniqueKeysWithValues: snapshot.map {
+          ($0.bundleID, FileSize.allocatedSize(at: $0.bundleURL) ?? 0)
+        })
+    }.value
   }
 
   func refreshRunningApps() {
@@ -80,10 +118,18 @@ final class AppState {
   func scanSelectedApp() async {
     if selectedBundleID == Self.devCachesSelectionID {
       scan = nil
+      orphans = nil
       await loadDevCaches()
       return
     }
+    if selectedBundleID == Self.orphansSelectionID {
+      scan = nil
+      devCaches = nil
+      await loadOrphans()
+      return
+    }
     devCaches = nil
+    orphans = nil
     guard let app = apps.first(where: { $0.bundleID == selectedBundleID }) else {
       scan = nil
       return
@@ -152,6 +198,33 @@ final class AppState {
 
     scan = current
     removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+  }
+
+  func loadOrphans() async {
+    isScanning = true
+    defer { isScanning = false }
+    let installed = apps.map(\.identity)
+    let found = await Task.detached {
+      OrphanScanner.forCurrentUser().scan(installed: installed)
+    }.value
+    guard selectedBundleID == Self.orphansSelectionID else { return }
+    // Orphans are never preselected.
+    orphans = found.map { SelectableItem(item: $0, isSelected: false) }
+  }
+
+  /// Move selected orphaned leftovers to the Trash, then rescan.
+  func cleanSelectedOrphans() async {
+    guard let items = orphans else { return }
+    var failures: [String] = []
+    for entry in items where entry.isSelected {
+      do {
+        try Trasher.trash(entry.item.url)
+      } catch {
+        failures.append("\(entry.item.url.lastPathComponent): \(error.localizedDescription)")
+      }
+    }
+    removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+    await loadOrphans()
   }
 
   func loadDevCaches() async {

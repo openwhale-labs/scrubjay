@@ -12,8 +12,10 @@ struct ContentView: View {
         Section {
           Label("Developer caches", systemImage: "hammer")
             .tag(AppState.devCachesSelectionID)
+          Label("Orphaned leftovers", systemImage: "questionmark.folder")
+            .tag(AppState.orphansSelectionID)
         }
-        Section("Applications") {
+        Section {
           ForEach(state.filteredApps) { app in
             HStack(spacing: 8) {
               Image(nsImage: NSWorkspace.shared.icon(forFile: app.bundleURL.path))
@@ -26,6 +28,12 @@ struct ContentView: View {
                   .foregroundStyle(.secondary)
               }
               Spacer()
+              if let size = state.appSizes[app.bundleID] {
+                Text(FileSize.format(size))
+                  .font(.caption)
+                  .foregroundStyle(.secondary)
+                  .monospacedDigit()
+              }
               if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
                 Image(systemName: "shippingbox")
                   .foregroundStyle(.secondary)
@@ -39,6 +47,15 @@ struct ContentView: View {
             }
             .tag(app.bundleID)
           }
+        } header: {
+          HStack {
+            Text("Applications")
+            Spacer()
+            sortHeader("Name", bySize: false)
+            sortHeader("Size", bySize: true)
+          }
+          .padding(.trailing, 8)
+          .padding(.bottom, 6)
         }
       }
       .searchable(text: $state.query, placement: .sidebar, prompt: "Search apps")
@@ -46,6 +63,8 @@ struct ContentView: View {
     } detail: {
       if state.selectedBundleID == AppState.devCachesSelectionID {
         DevCachesView()
+      } else if state.selectedBundleID == AppState.orphansSelectionID {
+        OrphansView()
       } else if state.isScanning {
         ProgressView("Scanning…")
       } else if state.scan != nil {
@@ -65,5 +84,23 @@ struct ContentView: View {
     .onChange(of: state.selectedBundleID) {
       Task { await state.scanSelectedApp() }
     }
+  }
+
+  /// A clickable sort key: click to activate, click again to flip direction.
+  private func sortHeader(_ title: String, bySize: Bool) -> some View {
+    Button {
+      state.selectSidebarSort(bySize: bySize)
+    } label: {
+      HStack(spacing: 2) {
+        Text(title)
+        if state.sidebarSortBySize == bySize {
+          Image(systemName: state.sidebarSortAscending ? "chevron.up" : "chevron.down")
+            .font(.system(size: 8, weight: .bold))
+        }
+      }
+      .font(.caption)
+      .foregroundStyle(state.sidebarSortBySize == bySize ? .primary : .secondary)
+    }
+    .buttonStyle(.plain)
   }
 }
