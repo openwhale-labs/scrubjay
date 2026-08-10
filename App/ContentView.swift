@@ -35,16 +35,22 @@ struct ContentView: View {
                   .monospacedDigit()
                   .help("App plus everything it left behind")
               }
-              if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
-                Image(systemName: "shippingbox")
-                  .foregroundStyle(.secondary)
-                  .help("Installed via Homebrew")
+              // Badges live in a fixed-width slot so sizes align across
+              // rows regardless of how many badges a row carries.
+              HStack(spacing: 4) {
+                if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
+                  Image(systemName: "shippingbox")
+                    .foregroundStyle(.secondary)
+                    .help("Installed via Homebrew")
+                }
+                if state.runningBundleIDs.contains(app.bundleID) {
+                  Image(systemName: "lock.fill")
+                    .foregroundStyle(.secondary)
+                    .help("Running — quit before uninstalling")
+                }
               }
-              if state.runningBundleIDs.contains(app.bundleID) {
-                Image(systemName: "lock.fill")
-                  .foregroundStyle(.secondary)
-                  .help("Running — quit before uninstalling")
-              }
+              .font(.caption)
+              .frame(width: 38, alignment: .leading)
             }
             .tag(app.bundleID)
           }

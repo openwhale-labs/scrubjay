@@ -17,8 +17,8 @@ def main() -> int:
     products = Path(os.environ["BUILT_PRODUCTS_DIR"])
     srcroot = Path(os.environ["SRCROOT"])
 
-    helper = products / "com.openwhale.scrubjay.helper"
-    plist = srcroot / "Helper" / "com.openwhale.scrubjay.helper.plist"
+    helper = products / "dev.openwhale.scrubjay.helper"
+    plist = srcroot / "Helper" / "dev.openwhale.scrubjay.helper.plist"
 
     helper_dir = app / "Contents" / "Library" / "HelperTools"
     daemon_dir = app / "Contents" / "Library" / "LaunchDaemons"

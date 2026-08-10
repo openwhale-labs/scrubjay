@@ -17,8 +17,8 @@ import Foundation
 }
 
 public enum HelperConstants {
-  public static let machServiceName = "com.openwhale.scrubjay.helper"
-  public static let plistName = "com.openwhale.scrubjay.helper.plist"
+  public static let machServiceName = "dev.openwhale.scrubjay.helper"
+  public static let plistName = "dev.openwhale.scrubjay.helper.plist"
   public static let version = "2"
 
   /// The helper refuses to touch anything outside these prefixes, and never

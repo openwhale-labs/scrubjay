@@ -1,6 +1,6 @@
 name: ScrubJay
 options:
-  bundleIdPrefix: com.openwhale
+  bundleIdPrefix: dev.openwhale
   deploymentTarget:
     macOS: "14.0"
 packages:
@@ -13,18 +13,18 @@ targets:
     sources: [Helper, Shared]
     settings:
       base:
-        PRODUCT_NAME: com.openwhale.scrubjay.helper
-        PRODUCT_BUNDLE_IDENTIFIER: com.openwhale.scrubjay.helper
+        PRODUCT_NAME: dev.openwhale.scrubjay.helper
+        PRODUCT_BUNDLE_IDENTIFIER: dev.openwhale.scrubjay.helper
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 67ULUSQ947
-        OTHER_CODE_SIGN_FLAGS: "-i com.openwhale.scrubjay.helper"
+        OTHER_CODE_SIGN_FLAGS: "-i dev.openwhale.scrubjay.helper"
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: 6.0
       configs:
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
-          OTHER_CODE_SIGN_FLAGS: "-i com.openwhale.scrubjay.helper --timestamp"
+          OTHER_CODE_SIGN_FLAGS: "-i dev.openwhale.scrubjay.helper --timestamp"
   ScrubJay:
     type: application
     platform: macOS
@@ -48,7 +48,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.openwhale.scrubjay
+        PRODUCT_BUNDLE_IDENTIFIER: dev.openwhale.scrubjay
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         CODE_SIGN_STYLE: Manual

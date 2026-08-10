@@ -74,7 +74,7 @@ final class ListenerDelegate: NSObject, NSXPCListenerDelegate {
   ) -> Bool {
     // Only the ScrubJay app signed by our team may talk to this helper.
     connection.setCodeSigningRequirement(
-      "anchor apple generic and identifier \"com.openwhale.scrubjay\" "
+      "anchor apple generic and identifier \"dev.openwhale.scrubjay\" "
         + "and certificate leaf[subject.OU] = \"67ULUSQ947\"")
     connection.exportedInterface = NSXPCInterface(with: ScrubJayHelperProtocol.self)
     connection.exportedObject = HelperService()

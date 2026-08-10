@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.openwhale.scrubjay.helper</string>
+	<string>dev.openwhale.scrubjay.helper</string>
 	<key>BundleProgram</key>
-	<string>Contents/Library/HelperTools/com.openwhale.scrubjay.helper</string>
+	<string>Contents/Library/HelperTools/dev.openwhale.scrubjay.helper</string>
 	<key>MachServices</key>
 	<dict>
-		<key>com.openwhale.scrubjay.helper</key>
+		<key>dev.openwhale.scrubjay.helper</key>
 		<true/>
 	</dict>
 	<key>AssociatedBundleIdentifiers</key>
 	<array>
-		<string>com.openwhale.scrubjay</string>
+		<string>dev.openwhale.scrubjay</string>
 	</array>
 </dict>
 </plist>

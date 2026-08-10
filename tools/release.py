@@ -50,8 +50,8 @@ def build() -> None:
 def verify_app() -> None:
     print("==> Verifying signatures")
     run("codesign", "--verify", "--deep", "--strict", str(APP))
-    helper = APP / "Contents" / "Library" / "HelperTools" / "com.openwhale.scrubjay.helper"
-    plist = APP / "Contents" / "Library" / "LaunchDaemons" / "com.openwhale.scrubjay.helper.plist"
+    helper = APP / "Contents" / "Library" / "HelperTools" / "dev.openwhale.scrubjay.helper"
+    plist = APP / "Contents" / "Library" / "LaunchDaemons" / "dev.openwhale.scrubjay.helper.plist"
     for path in (helper, plist):
         if not path.exists():
             raise SystemExit(f"missing embedded helper piece: {path}")
