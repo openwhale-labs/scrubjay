@@ -30,13 +30,25 @@ struct ScanResult {
   }
 }
 
+/// One row in the developer-caches checklist. Nothing is preselected.
+struct SelectableCache: Identifiable {
+  let status: DevCacheStatus
+  var isSelected: Bool
+
+  var id: String { status.id }
+}
+
 @MainActor
 @Observable
 final class AppState {
+  /// Sidebar sentinel for the developer-caches pane.
+  static let devCachesSelectionID = "scrubjay.dev-caches"
+
   var apps: [InstalledApp] = []
   var query = ""
   var selectedBundleID: String?
   var scan: ScanResult?
+  var devCaches: [SelectableCache]?
   var isScanning = false
   var removalError: String?
 
@@ -53,6 +65,12 @@ final class AppState {
   }
 
   func scanSelectedApp() async {
+    if selectedBundleID == Self.devCachesSelectionID {
+      scan = nil
+      await loadDevCaches()
+      return
+    }
+    devCaches = nil
     guard let app = apps.first(where: { $0.bundleID == selectedBundleID }) else {
       scan = nil
       return
@@ -110,6 +128,30 @@ final class AppState {
 
     scan = current
     removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+  }
+
+  func loadDevCaches() async {
+    isScanning = true
+    defer { isScanning = false }
+    let present = await Task.detached { DevCaches.present() }.value
+    guard selectedBundleID == Self.devCachesSelectionID else { return }
+    devCaches = present.map { SelectableCache(status: $0, isSelected: false) }
+  }
+
+  /// Move the selected caches to the Trash, then re-list.
+  func cleanSelectedCaches() async {
+    guard let caches = devCaches else { return }
+    var failures: [String] = []
+    for cache in caches where cache.isSelected {
+      do {
+        try Trasher.trash(cache.status.location.url)
+      } catch {
+        failures.append(
+          "\(cache.status.location.name): \(error.localizedDescription)")
+      }
+    }
+    removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
+    await loadDevCaches()
   }
 
   /// Select an app dropped onto the window. Returns false when the bundle
