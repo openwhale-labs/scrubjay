@@ -104,6 +104,20 @@ final class AppState {
     removalError = failures.isEmpty ? nil : failures.joined(separator: "\n")
   }
 
+  /// Select an app dropped onto the window. Returns false when the bundle
+  /// cannot be identified or is not in the inventory yet.
+  func selectApp(at url: URL) -> Bool {
+    guard let bundleID = Bundle(url: url)?.bundleIdentifier else { return false }
+    if !apps.contains(where: { $0.bundleID == bundleID }) {
+      // An app from a location the inventory does not cover (e.g. a DMG).
+      guard let app = AppInventory.readBundle(at: url) else { return false }
+      apps.append(app)
+      apps.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+    selectedBundleID = bundleID
+    return true
+  }
+
   private static func isRunning(bundleID: String) -> Bool {
     !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty
   }

@@ -46,7 +46,8 @@ public enum AppInventory {
     return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
   }
 
-  static func readBundle(at url: URL) -> InstalledApp? {
+  /// Read a single app bundle, e.g. one dropped onto the window.
+  public static func readBundle(at url: URL) -> InstalledApp? {
     guard let bundle = Bundle(url: url), let bundleID = bundle.bundleIdentifier else {
       return nil
     }
