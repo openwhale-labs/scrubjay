@@ -24,15 +24,16 @@ struct DevCachesView: View {
         Divider()
         List {
           ForEach(caches.indices, id: \.self) { index in
-            Toggle(isOn: .init(
-              get: { state.devCaches?[index].isSelected ?? false },
-              set: { state.devCaches?[index].isSelected = $0 })
-            ) {
+            HStack(spacing: 8) {
+              Toggle("", isOn: .init(
+                get: { state.devCaches?[index].isSelected ?? false },
+                set: { state.devCaches?[index].isSelected = $0 }))
+                .labelsHidden()
+                .toggleStyle(.checkbox)
               cacheRow(caches[index].status)
             }
           }
         }
-        .toggleStyle(.checkbox)
         Divider()
         HStack {
           Text("\(selected.count) selected · \(FileSize.format(selectedSize))")

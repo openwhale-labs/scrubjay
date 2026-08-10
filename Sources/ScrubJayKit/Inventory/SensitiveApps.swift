@@ -14,6 +14,11 @@ public enum SensitiveApps {
     "com.hnc.Discord",
     "com.tinyspeck.slackmacgap",  // Slack
     "org.whispersystems.signal-desktop",
+    "com.electron.lark",  // 飞书 Feishu
+    "com.electron.lark.international",
+    "com.larksuite.larkApp",  // Lark
+    "com.tencent.WeWorkMac",  // 企业微信 WeCom
+    "com.alibaba.DingTalkMac",  // 钉钉
   ]
 
   /// Kinds that hold user data (as opposed to regenerable caches) for a

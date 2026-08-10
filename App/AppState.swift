@@ -159,7 +159,9 @@ final class AppState {
     defer { isScanning = false }
     let present = await Task.detached { DevCaches.present() }.value
     guard selectedBundleID == Self.devCachesSelectionID else { return }
-    devCaches = present.map { SelectableCache(status: $0, isSelected: false) }
+    devCaches = present
+      .sorted { ($0.sizeBytes ?? 0) > ($1.sizeBytes ?? 0) }
+      .map { SelectableCache(status: $0, isSelected: false) }
   }
 
   /// Move the selected caches to the Trash, then re-list.
