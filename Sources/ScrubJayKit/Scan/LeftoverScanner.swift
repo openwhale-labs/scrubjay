@@ -116,8 +116,10 @@ public struct LeftoverScanner: Sendable {
     let composed = Matcher.normalize(vendorDir) + Matcher.normalize(childName)
     let direct = Matcher.normalize(childName)
     return rivals.contains { rival in
-      let rivalName = Matcher.normalize(rival.name)
-      return !rivalName.isEmpty && (composed == rivalName || direct == rivalName)
+      rival.allNames.contains { name in
+        let rivalName = Matcher.normalize(name)
+        return !rivalName.isEmpty && (composed == rivalName || direct == rivalName)
+      }
     }
   }
 }

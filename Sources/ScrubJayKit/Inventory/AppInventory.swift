@@ -52,11 +52,18 @@ public enum AppInventory {
       return nil
     }
     let info = bundle.infoDictionary ?? [:]
-    let name =
-      (info["CFBundleDisplayName"] as? String)
-      ?? (info["CFBundleName"] as? String)
-      ?? url.deletingPathExtension().lastPathComponent
+    // Display what Finder displays: the (localized) file name. Info.plist
+    // names still matter — leftover directories are often keyed by them
+    // ("Code" for Visual Studio Code) — so they join the identity as
+    // alternate names.
+    let name = FileManager.default.displayName(atPath: url.path)
+      .replacingOccurrences(of: ".app", with: "")
+    let altNames = [info["CFBundleDisplayName"] as? String, info["CFBundleName"] as? String]
+      .compactMap { $0 }
+      .filter { $0 != name }
     let version = info["CFBundleShortVersionString"] as? String
-    return InstalledApp(bundleID: bundleID, name: name, bundleURL: url, version: version)
+    return InstalledApp(
+      bundleID: bundleID, name: name, altNames: Array(Set(altNames)).sorted(),
+      bundleURL: url, version: version)
   }
 }

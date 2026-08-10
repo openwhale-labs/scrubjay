@@ -3,12 +3,20 @@ import Foundation
 /// The minimal identity needed to match leftovers to an app.
 public struct AppIdentity: Sendable, Hashable {
   public let bundleID: String
+  /// Display name, e.g. "Visual Studio Code" (the /Applications file name).
   public let name: String
+  /// Other names the app is known by, e.g. its CFBundleName "Code" — leftover
+  /// directories are frequently keyed by these.
+  public let altNames: [String]
 
-  public init(bundleID: String, name: String) {
+  public init(bundleID: String, name: String, altNames: [String] = []) {
     self.bundleID = bundleID
     self.name = name
+    self.altNames = altNames
   }
+
+  /// All names that participate in matching.
+  public var allNames: [String] { [name] + altNames }
 }
 
 /// Pure name-matching logic. No filesystem access — fully unit-testable.
@@ -65,13 +73,15 @@ public enum Matcher {
     // Name matches. Normalization strips separators so that
     // "Google Chrome", "google-chrome" and "GoogleChrome" all compare equal.
     let normalizedEntry = normalize(entryName)
-    let normalizedName = normalize(identity.name)
-    guard !normalizedName.isEmpty, !genericNames.contains(normalizedName) else {
-      return nil
-    }
-    if normalizedEntry == normalizedName {
-      // Very short names ("Arc", "IINA") collide too easily to trust.
-      return normalizedName.count <= 3 ? .low : .medium
+    for name in identity.allNames {
+      let normalizedName = normalize(name)
+      guard !normalizedName.isEmpty, !genericNames.contains(normalizedName) else {
+        continue
+      }
+      if normalizedEntry == normalizedName {
+        // Very short names ("Arc", "IINA") collide too easily to trust.
+        return normalizedName.count <= 3 ? .low : .medium
+      }
     }
 
     return nil
@@ -88,7 +98,8 @@ public enum Matcher {
       return direct
     }
     let composed = normalize(vendorDir) + normalize(entryName)
-    if composed == normalize(identity.name), !normalize(entryName).isEmpty {
+    guard !normalize(entryName).isEmpty else { return nil }
+    for name in identity.allNames where composed == normalize(name) {
       return .medium
     }
     return nil

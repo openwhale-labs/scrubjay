@@ -86,6 +86,16 @@ struct MatcherTests {
     #expect(Matcher.match(entryName: "Slack", identity: chrome) == nil)
   }
 
+  @Test func alternateNamesParticipateInMatching() {
+    // Visual Studio Code: file name differs from its CFBundleName "Code",
+    // and the Application Support directory is keyed by the latter.
+    let vscode = AppIdentity(
+      bundleID: "com.microsoft.VSCode", name: "Visual Studio Code", altNames: ["Code"])
+    #expect(Matcher.match(entryName: "Code", identity: vscode) == .medium)
+    #expect(Matcher.match(entryName: "Visual Studio Code", identity: vscode) == .medium)
+    #expect(Matcher.match(entryName: "Codex", identity: vscode) == nil)
+  }
+
   @Test func normalizeStripsExtensionsAndSeparators() {
     #expect(Matcher.normalize("Google Chrome.app") == "googlechrome")
     #expect(Matcher.normalize("google_chrome") == "googlechrome")
