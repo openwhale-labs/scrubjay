@@ -25,6 +25,17 @@ struct ContentView: View {
                   .font(.caption)
                   .foregroundStyle(.secondary)
               }
+              Spacer()
+              if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
+                Image(systemName: "shippingbox")
+                  .foregroundStyle(.secondary)
+                  .help("Installed via Homebrew")
+              }
+              if state.runningBundleIDs.contains(app.bundleID) {
+                Image(systemName: "lock.fill")
+                  .foregroundStyle(.secondary)
+                  .help("Running — quit before uninstalling")
+              }
             }
             .tag(app.bundleID)
           }

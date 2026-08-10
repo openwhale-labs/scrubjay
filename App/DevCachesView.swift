@@ -76,6 +76,7 @@ struct DevCachesView: View {
           .foregroundStyle(.secondary)
           .monospacedDigit()
       }
+      RevealButton(url: status.location.url)
     }
   }
 }

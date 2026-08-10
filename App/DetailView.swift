@@ -46,6 +46,14 @@ struct DetailView: View {
           .foregroundStyle(.orange)
           .padding(.top, 4)
       }
+      if scan.holdsChatHistory {
+        Label(
+          "This app keeps chat history on this Mac. Its data folders start unselected — back them up first if you may ever need them.",
+          systemImage: "bubble.left.and.exclamationmark.bubble.right")
+          .font(.callout)
+          .foregroundStyle(.red)
+          .padding(.top, 4)
+      }
       if let cask = scan.caskToken {
         Label(
           "Installed via Homebrew. After removal, run `brew uninstall --cask \(cask)` to clear its records.",
@@ -149,6 +157,7 @@ struct DetailView: View {
           .foregroundStyle(.secondary)
           .monospacedDigit()
       }
+      RevealButton(url: url)
     }
   }
 
