@@ -33,6 +33,7 @@ struct ContentView: View {
                   .font(.caption)
                   .foregroundStyle(.secondary)
                   .monospacedDigit()
+                  .help("App plus everything it left behind")
               }
               if state.caskAppNames.contains(app.bundleURL.lastPathComponent) {
                 Image(systemName: "shippingbox")

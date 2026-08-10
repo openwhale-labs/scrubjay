@@ -80,8 +80,10 @@ final class AppState {
   var runningBundleIDs: Set<String> = []
   /// App bundle file names owned by Homebrew casks, for the sidebar badge.
   var caskAppNames: Set<String> = []
-  /// App bundle sizes, computed in the background after the list loads.
+  /// Total footprint per app — bundle plus every matched leftover —
+  /// computed in the background after the list loads.
   var appSizes: [String: Int64] = [:]
+  private var sizeSweepGeneration = 0
   /// Sidebar ordering: which key, and whether ascending. Clicking the active
   /// key in the UI flips the direction.
   var sidebarSortBySize = false
@@ -123,17 +125,25 @@ final class AppState {
     caskAppNames = Set(
       await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
     refreshRunningApps()
-    // Sizes are cosmetic — compute them without holding up whoever called.
+    // Footprints are cosmetic — sweep in the background, one app at a time,
+    // so numbers fill in progressively without holding anything up.
+    sizeSweepGeneration += 1
+    let sweep = sizeSweepGeneration
     let snapshot = apps
     Task {
-      let sizes = await Task.detached {
-        Dictionary(
-          uniqueKeysWithValues: snapshot.map {
-            ($0.bundleID, FileSize.allocatedSize(at: $0.bundleURL) ?? 0)
-          })
-      }.value
-      let installed = Set(self.apps.map(\.bundleID))
-      self.appSizes = sizes.filter { installed.contains($0.key) }
+      let identities = snapshot.map(\.identity)
+      for app in snapshot {
+        let total = await Task.detached {
+          let bundle = FileSize.allocatedSize(at: app.bundleURL) ?? 0
+          let leftovers = LeftoverScanner.forCurrentUser()
+            .scan(for: app.identity, amongInstalled: identities)
+            .compactMap(\.sizeBytes)
+            .reduce(0, +)
+          return bundle + leftovers
+        }.value
+        guard sweep == self.sizeSweepGeneration else { return }
+        self.appSizes[app.bundleID] = total
+      }
     }
   }
 
