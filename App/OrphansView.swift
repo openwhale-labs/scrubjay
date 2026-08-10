@@ -28,8 +28,7 @@ struct OrphansView: View {
           HStack {
             Text("Orphaned leftovers").font(.title2.bold())
             Spacer()
-            TextField("Filter", text: $filter)
-              .textFieldStyle(.roundedBorder)
+            FilterField(prompt: "Filter", text: $filter)
               .frame(width: 200)
           }
           Text(
