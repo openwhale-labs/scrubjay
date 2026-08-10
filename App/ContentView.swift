@@ -12,13 +12,11 @@ struct ContentView: View {
         Section {
           Label("Developer caches", systemImage: "hammer")
             .tag(AppState.devCachesSelectionID)
-            .listRowBackground(Color.clear)
           Label("Orphaned leftovers", systemImage: "questionmark.folder")
             .tag(AppState.orphansSelectionID)
-            .listRowBackground(Color.clear)
         }
         Section {
-          ForEach(state.filteredApps) { app in
+          ForEach(Array(state.filteredApps.enumerated()), id: \.element.id) { index, app in
             HStack(spacing: 8) {
               Image(nsImage: NSWorkspace.shared.icon(forFile: app.bundleURL.path))
                 .resizable()
@@ -49,6 +47,11 @@ struct ContentView: View {
               }
             }
             .tag(app.bundleID)
+            // Hand-rolled zebra striping, applications only: the system
+            // alternating API paints tool rows too.
+            .listRowBackground(
+              index.isMultiple(of: 2)
+                ? Color.clear : Color.primary.opacity(0.045))
           }
         } header: {
           HStack {
@@ -61,7 +64,6 @@ struct ContentView: View {
           .padding(.bottom, 6)
         }
       }
-      .alternatingRowBackgrounds()
       .searchable(text: $state.query, placement: .sidebar, prompt: "Search apps")
       .navigationSplitViewColumnWidth(min: 220, ideal: 260)
     } detail: {
