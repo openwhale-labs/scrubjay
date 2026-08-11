@@ -126,6 +126,31 @@ def gatekeeper(dmg: Path) -> None:
     print("    accepted")
 
 
+def make_appcast(dmg: Path) -> Path:
+    """Sign the DMG and refresh the Sparkle appcast next to it.
+
+    generate_appcast reads every DMG in the directory and emits the feed the
+    app polls, so the release notes URL and version come from the bundle
+    itself — nothing to keep in sync by hand.
+    """
+    print("==> Generating appcast")
+    tool = (
+        DERIVED / "SourcePackages" / "artifacts" / "sparkle" / "Sparkle" / "bin"
+        / "generate_appcast"
+    )
+    if not tool.exists():
+        raise SystemExit(f"generate_appcast not found at {tool}")
+    run(
+        str(tool), str(dmg.parent),
+        "--download-url-prefix", "https://dl.openwhale.dev/scrubjay/",
+        "--link", "https://scrubjay.openwhale.dev",
+    )
+    appcast = dmg.parent / "appcast.xml"
+    if not appcast.exists():
+        raise SystemExit("generate_appcast produced no appcast.xml")
+    return appcast
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", default="AC_PASSWORD")
@@ -141,7 +166,10 @@ def main() -> int:
         return 0
     notarize(dmg, args.profile)
     gatekeeper(dmg)
+    appcast = make_appcast(dmg)
     print(f"\nDone: {dmg}")
+    print(f"Appcast: {appcast}")
+    print("Upload both to R2: tools/publish.py")
     return 0
 
 

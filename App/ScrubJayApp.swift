@@ -1,9 +1,12 @@
 import AppKit
+import Sparkle
 import SwiftUI
 
 @main
 struct ScrubJayApp: App {
   @State private var state = AppState()
+  private let updater = SPUStandardUpdaterController(
+    startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
   private static let websiteURL = URL(string: "https://scrubjay.openwhale.dev")!
 
@@ -21,6 +24,9 @@ struct ScrubJayApp: App {
               string: "scrubjay.openwhale.dev",
               attributes: [.link: Self.websiteURL, .font: NSFont.systemFont(ofSize: 11)])
           ])
+        }
+        Button("Check for Updates…") {
+          updater.updater.checkForUpdates()
         }
       }
       CommandGroup(replacing: .help) {

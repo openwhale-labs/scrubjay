@@ -6,6 +6,9 @@ options:
 packages:
   ScrubJayKit:
     path: .
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.9.5
 targets:
   ScrubJayHelper:
     type: tool
@@ -34,6 +37,8 @@ targets:
     dependencies:
       - package: ScrubJayKit
         product: ScrubJayKit
+      - package: Sparkle
+        product: Sparkle
       - target: ScrubJayHelper
         embed: false
     postBuildScripts:
@@ -48,6 +53,9 @@ targets:
         NSPrincipalClass: NSApplication
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        SUFeedURL: https://dl.openwhale.dev/scrubjay/appcast.xml
+        SUEnableAutomaticChecks: true
+        SUPublicEDKey: OadJI+5ztB9ukGXhSmhtz2c6CH1YDX7UhU+YMR6WLH4=
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.openwhale.scrubjay

@@ -24,5 +24,11 @@
 	<string>public.app-category.utilities</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://dl.openwhale.dev/scrubjay/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>OadJI+5ztB9ukGXhSmhtz2c6CH1YDX7UhU+YMR6WLH4=</string>
 </dict>
 </plist>
