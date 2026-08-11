@@ -77,7 +77,7 @@ struct LeftoverScannerTests {
       Set(paths) == [
         "Google Chrome", "com.google.Chrome", "com.google.Chrome.plist",
         "com.google.Chrome.savedState", "Chrome", "com.google.Chrome.agent.plist",
-        "com.google.Chrome.sfl4", "5A4RE8SF68.com.google.Chrome",
+        "com.google.Chrome.sfl4", "5A4RE8SF68.com.google.Chrome"
       ])
     #expect(items.count == 9)  // com.google.Chrome appears in two roots
 

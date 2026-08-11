@@ -26,7 +26,7 @@ struct Orphans: ParsableCommand {
     var total: Int64 = 0
     for (confidence, title) in [
       (Confidence.medium, "No related app installed"),
-      (Confidence.low, "Vendor apps still installed — often shared tooling"),
+      (Confidence.low, "Vendor apps still installed — often shared tooling")
     ] {
       let group = items.filter { $0.confidence == confidence }
       guard !group.isEmpty else { continue }

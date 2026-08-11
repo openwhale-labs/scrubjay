@@ -17,3 +17,16 @@ jobs:
         run: swift build
       - name: Test
         run: swift test
+
+  lint:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install SwiftLint
+        run: brew install swiftlint
+      # Fails the build on errors only. The design-language rules are
+      # declared as errors, so a stray colour or spacing literal cannot
+      # merge; SwiftUI bodies being long stays a warning worth reading
+      # rather than a wall someone routes around with a disable comment.
+      - name: Lint
+        run: swiftlint lint --config .swiftlint.yml

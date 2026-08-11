@@ -25,13 +25,13 @@ public enum Matcher {
   /// e.g. `com.google.Chrome.plist` or `com.google.Chrome.savedState`.
   /// Stored lowercase; matching is case-insensitive.
   private static let knownSuffixes: Set<String> = [
-    "plist", "savedstate", "binarycookies", "plist.lockfile", "sfl2", "sfl3", "sfl4",
+    "plist", "savedstate", "binarycookies", "plist.lockfile", "sfl2", "sfl3", "sfl4"
   ]
 
   /// Names too generic to mean anything on their own.
   private static let genericNames: Set<String> = [
     "app", "apps", "helper", "agent", "cache", "caches", "log", "logs",
-    "support", "library", "data", "temp", "tmp", "update", "updater",
+    "support", "library", "data", "temp", "tmp", "update", "updater"
   ]
 
   /// Release-channel tokens. `com.google.Chrome.beta.plist` is prefixed by
@@ -39,7 +39,7 @@ public enum Matcher {
   /// prefix match continues with one of these, the entry is reported at `low`
   /// so it is never selected automatically.
   private static let channelTokens: Set<String> = [
-    "beta", "canary", "dev", "nightly", "alpha", "preview", "insiders",
+    "beta", "canary", "dev", "nightly", "alpha", "preview", "insiders"
   ]
 
   /// Suffix tokens that denote an app's own auxiliary pieces (helpers,
@@ -49,7 +49,7 @@ public enum Matcher {
   private static let helperTokens: Set<String> = [
     "helper", "helpers", "renderer", "plugin", "plugins", "agent", "agents",
     "updater", "shipit", "app", "web", "service", "services", "extension",
-    "extensions", "widget", "widgets",
+    "extensions", "widget", "widgets"
   ]
 
   /// Decide whether a directory entry belongs to the app.

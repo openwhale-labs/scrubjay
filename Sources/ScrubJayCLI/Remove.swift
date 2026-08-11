@@ -130,8 +130,7 @@ struct Remove: ParsableCommand {
     print("\nDone. Items are in the Trash and can be restored from there.")
     if !leftoversOnly,
       let cask = Homebrew.caskToken(
-        forAppNamed: app.bundleURL.lastPathComponent, in: Homebrew.installedCasks())
-    {
+        forAppNamed: app.bundleURL.lastPathComponent, in: Homebrew.installedCasks()) {
       print("Installed via Homebrew — run `brew uninstall --cask \(cask)` to clear its records.")
     }
   }

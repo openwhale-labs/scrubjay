@@ -40,7 +40,10 @@ struct OrphansView: View {
               .frame(width: Theme.Size.filterField)
           }
           Text(
-            "Files keyed by bundle identifiers that no installed app claims — usually traces of uninstalled apps. Inspect with the magnifier; nothing is selected for you."
+            """
+              Files keyed by bundle identifiers that no installed app claims — usually traces of \
+              uninstalled apps. Inspect with the magnifier; nothing is selected for you.
+            """
           )
           .font(.callout)
           .foregroundStyle(Theme.Palette.secondaryText)
@@ -104,13 +107,12 @@ struct OrphansView: View {
   }
 
   private func list(orphans: [SelectableItem], visible: [SelectableItem], state: AppState)
-    -> some View
-  {
+    -> some View {
     List {
       ForEach(
         [
           (Confidence.medium, "No related app installed"),
-          (Confidence.low, "Vendor apps still installed — often shared tooling"),
+          (Confidence.low, "Vendor apps still installed — often shared tooling")
         ], id: \.0
       ) { confidence, title in
         let group = visible.filter { $0.item.confidence == confidence }

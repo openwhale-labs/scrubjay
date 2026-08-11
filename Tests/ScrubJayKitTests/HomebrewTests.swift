@@ -31,7 +31,7 @@ struct HomebrewTests {
     #expect(
       casks == [
         CaskInstall(token: "jordanbaird-ice", appNames: ["Ice.app"]),
-        CaskInstall(token: "utm", appNames: ["UTM.app"]),
+        CaskInstall(token: "utm", appNames: ["UTM.app"])
       ])
   }
 

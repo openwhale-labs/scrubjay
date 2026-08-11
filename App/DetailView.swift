@@ -62,7 +62,10 @@ struct DetailView: View {
         }
         if scan.holdsChatHistory {
           Label(
-            "This app keeps chat history on this Mac. Its data folders start unselected — back them up first if you may ever need them.",
+            """
+              This app keeps chat history on this Mac. Its data folders start unselected — back them \
+              up first if you may ever need them.
+            """,
             systemImage: "bubble.left.and.exclamationmark.bubble.right")
             .font(.callout)
             .foregroundStyle(Theme.Palette.danger)
@@ -275,7 +278,7 @@ struct DetailView: View {
         .padding(.leading, Theme.Space.md)
       Spacer()
       if state.isRemoving {
-        ProgressView().controlSize(.small).padding(.trailing, 4)
+        ProgressView().controlSize(.small).padding(.trailing, Theme.Space.xs)
       }
       Button("Move to Trash…") { confirming = true }
         .keyboardShortcut(.defaultAction)

@@ -1,0 +1,101 @@
+# Style is enforced here, not remembered. The design-language rules below
+# exist because the same component once rendered two different greys: a
+# reviewer catching that by eye is luck, a failing build is not.
+
+included:
+  - App
+  - Sources
+  - Tests
+  - Helper
+
+excluded:
+  - .build
+  - DerivedData
+
+line_length:
+  warning: 100
+  error: 120
+  ignores_comments: true
+
+identifier_name:
+  min_length: 2
+  excluded: [id, up, ok]
+
+function_body_length:
+  warning: 60
+  error: 100
+
+type_body_length:
+  warning: 300
+  error: 400
+
+disabled_rules:
+  # SwiftUI view bodies are declarative; nesting is the shape of the UI.
+  - nesting
+  # Trailing closures read worse than a labelled argument in some builders.
+  - multiple_closures_with_trailing_closure
+
+opt_in_rules:
+  - empty_count
+  - first_where
+  - contains_over_filter_count
+  - last_where
+  - sorted_first_last
+  - unneeded_parentheses_in_closure_argument
+  - redundant_nil_coalescing
+  - toggle_bool
+  - explicit_init
+  - closure_spacing
+  - collection_alignment
+  - literal_expression_end_indentation
+  - operator_usage_whitespace
+  - vertical_parameter_alignment_on_call
+
+custom_rules:
+  hierarchical_color:
+    name: "Hierarchical colour in a view"
+    regex: '\.(foregroundStyle|foregroundColor|fill|background)\(\s*\.(secondary|tertiary|quaternary|primary)\b'
+    match_kinds: [identifier, keyword]
+    message: >
+      Hierarchical styles resolve against an ancestor's foregroundStyle, so the
+      same component renders differently depending on where it is placed. Use a
+      Theme.Palette colour.
+    severity: error
+    excluded: "App/Theme.swift"
+
+  literal_color:
+    name: "Colour literal in a view"
+    regex: '\.(foregroundStyle|foregroundColor|fill|background|stroke|tint)\(\s*(Color\.|\.)(red|orange|yellow|green|mint|teal|cyan|blue|indigo|purple|pink|brown|white|black|gray|grey)\b'
+    message: "Name the colour in Theme.Palette instead of reaching for a system colour here."
+    severity: error
+    excluded: "App/Theme.swift"
+
+  literal_spacing:
+    name: "Spacing literal"
+    regex: '(HStack|VStack|LazyHStack|LazyVStack|Grid)\(\s*(alignment:\s*\.\w+,\s*)?spacing:\s*([3-9]|[1-9]\d+)\b'
+    message: >
+      Use a Theme.Space step. Only 0, 1, and 2 may be literal — those are layout,
+      not design decisions.
+    severity: error
+    excluded: "App/Theme.swift"
+
+  literal_padding:
+    name: "Padding literal"
+    regex: '\.padding\(\s*\.(horizontal|vertical|top|bottom|leading|trailing)\s*,\s*([3-9]|[1-9]\d+)\b'
+    message: "Use a Theme.Space step rather than a bare number."
+    severity: error
+    excluded: "App/Theme.swift"
+
+  literal_corner_radius:
+    name: "Corner-radius literal"
+    regex: 'cornerRadius:\s*([1-9]\d*)'
+    message: "Use a Theme.Radius step."
+    severity: error
+    excluded: "App/Theme.swift"
+
+  literal_icon_frame:
+    name: "Icon size literal"
+    regex: '\.frame\(\s*width:\s*([1-9]\d+),\s*height:\s*([1-9]\d+)\s*\)'
+    message: "Use a Theme.IconSize or Theme.Size step."
+    severity: error
+    excluded: "App/Theme.swift"

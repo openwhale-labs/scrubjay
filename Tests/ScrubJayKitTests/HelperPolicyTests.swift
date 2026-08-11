@@ -20,7 +20,7 @@ struct HelperPolicyTests {
     for path in [
       "/Library/Keychains", "/Library/Security", "/Library/Extensions",
       "/Library/Frameworks", "/Library/Internet Plug-Ins", "/Library/Input Methods",
-      "/Library/StartupItems", "/Library/Managed Preferences",
+      "/Library/StartupItems", "/Library/Managed Preferences"
     ] {
       #expect(!HelperConstants.allowedLibraryRoots.contains(path))
     }

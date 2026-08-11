@@ -20,13 +20,13 @@ public enum SensitiveApps {
     "com.tencent.WeWorkMac",  // 企业微信 WeCom
     "com.alibaba.DingTalkMac",  // 钉钉
     "com.microsoft.teams",
-    "com.microsoft.teams2",
+    "com.microsoft.teams2"
   ]
 
   /// Kinds that hold user data (as opposed to regenerable caches) for a
   /// sensitive app.
   public static let dataKinds: Set<LeftoverKind> = [
-    .containers, .groupContainers, .applicationSupport,
+    .containers, .groupContainers, .applicationSupport
   ]
 
   public static func holdsChatHistory(bundleID: String) -> Bool {

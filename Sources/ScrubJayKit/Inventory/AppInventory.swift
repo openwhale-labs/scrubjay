@@ -7,7 +7,7 @@ public enum AppInventory {
     [
       URL(fileURLWithPath: "/Applications", isDirectory: true),
       FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Applications", isDirectory: true),
+        .appendingPathComponent("Applications", isDirectory: true)
     ]
   }
 
@@ -52,12 +52,12 @@ public enum AppInventory {
   public static func auxiliaryBundleDirectories() -> [URL] {
     let home = FileManager.default.homeDirectoryForCurrentUser
     let subpaths = [
-      "Input Methods", "PreferencePanes", "Screen Savers", "QuickLook", "Spotlight",
+      "Input Methods", "PreferencePanes", "Screen Savers", "QuickLook", "Spotlight"
     ]
     return subpaths.flatMap { sub in
       [
         URL(fileURLWithPath: "/Library/\(sub)", isDirectory: true),
-        home.appendingPathComponent("Library/\(sub)", isDirectory: true),
+        home.appendingPathComponent("Library/\(sub)", isDirectory: true)
       ]
     }
   }

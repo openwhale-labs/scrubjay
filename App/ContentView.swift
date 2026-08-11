@@ -63,7 +63,7 @@ struct ContentView: View {
             sortHeader("Name", bySize: false)
             sortHeader("Size", bySize: true)
           }
-          .padding(.trailing, 16)
+          .padding(.trailing, Theme.Space.xl)
           .padding(.bottom, Theme.Space.sm)
         }
       }

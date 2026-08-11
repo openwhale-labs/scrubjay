@@ -24,7 +24,7 @@ public enum Trasher {
       "/Applications",
       "/Library",
       "/System",
-      "/Users",
+      "/Users"
     ]
     return protected.contains(path)
   }

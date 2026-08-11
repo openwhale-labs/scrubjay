@@ -39,7 +39,7 @@ public enum HelperConstants {
     "/Library/Preferences",
     "/Library/LaunchAgents",
     "/Library/LaunchDaemons",
-    "/Library/PrivilegedHelperTools",
+    "/Library/PrivilegedHelperTools"
   ]
 
   /// App bundles live here; only whole `.app` bundles qualify. Covers

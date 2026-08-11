@@ -59,7 +59,7 @@ public enum LeftoverCatalog {
       root(
         .recentDocuments,
         "Application Support/com.apple.sharedfilelist/"
-          + "com.apple.LSSharedFileList.ApplicationRecentDocuments"),
+          + "com.apple.LSSharedFileList.ApplicationRecentDocuments")
     ]
   }
 
@@ -75,7 +75,7 @@ public enum LeftoverCatalog {
       root(.preferences, "Preferences"),
       root(.launchAgents, "LaunchAgents"),
       root(.launchDaemons, "LaunchDaemons"),
-      root(.privilegedHelpers, "PrivilegedHelperTools"),
+      root(.privilegedHelpers, "PrivilegedHelperTools")
     ]
   }
 

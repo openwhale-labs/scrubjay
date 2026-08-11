@@ -19,7 +19,7 @@ public struct LeftoverScanner: Sendable {
   /// Root kinds where vendors commonly nest per-app data one level down,
   /// e.g. `Application Support/Google/Chrome`.
   private static let vendorNestedKinds: Set<LeftoverKind> = [
-    .applicationSupport, .caches, .logs,
+    .applicationSupport, .caches, .logs
   ]
 
   /// Scan all roots for entries matching the app identity.
@@ -62,8 +62,7 @@ public struct LeftoverScanner: Sendable {
         // between a vendor's apps — dedicated matching, always `low`.
         if root.kind == .groupContainers {
           if let confidence = Matcher.matchGroupContainer(entryName: name, identity: identity),
-            !claimedByRival(name, target: identity, rivals: rivals)
-          {
+            !claimedByRival(name, target: identity, rivals: rivals) {
             append(entry, root.kind, confidence)
           }
           continue
@@ -86,8 +85,7 @@ public struct LeftoverScanner: Sendable {
           Matcher.normalize(name) == vendor,
           (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
           let children = try? fm.contentsOfDirectory(
-            at: entry, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
-        {
+            at: entry, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
           for child in children {
             let childName = child.lastPathComponent
             guard

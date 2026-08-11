@@ -80,7 +80,7 @@ public enum DevCaches {
       entry(
         "playwright", "Playwright browsers",
         "Downloaded browser builds; re-fetched by npx playwright install.",
-        "Library/Caches/ms-playwright"),
+        "Library/Caches/ms-playwright")
     ]
   }
 

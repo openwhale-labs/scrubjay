@@ -264,8 +264,7 @@ final class AppState {
       // Unloading is a behavior change beyond the Trash model: only do it
       // when the agent's own Label carries this app's bundle ID.
       if let agent = entry.item.launchAgent, agent.isLoaded,
-        agent.belongsTo(bundleID: current.app.bundleID)
-      {
+        agent.belongsTo(bundleID: current.app.bundleID) {
         LaunchAgents.unload(label: agent.label)
       }
       do {

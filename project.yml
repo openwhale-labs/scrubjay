@@ -8,7 +8,7 @@ packages:
     path: .
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
-    from: 2.9.5
+    exactVersion: 2.9.5
 targets:
   ScrubJayHelper:
     type: tool
@@ -43,6 +43,15 @@ targets:
         product: Sparkle
       - target: ScrubJayHelper
         embed: false
+    preBuildScripts:
+      - name: SwiftLint
+        script: |
+          if command -v swiftlint >/dev/null; then
+            swiftlint lint --quiet --config "${SRCROOT}/.swiftlint.yml"
+          else
+            echo "warning: swiftlint not installed — brew install swiftlint"
+          fi
+        basedOnDependencyAnalysis: false
     postBuildScripts:
       - name: Embed privileged helper
         script: /usr/bin/env python3 "${SRCROOT}/tools/embed_helper.py"
