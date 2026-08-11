@@ -17,16 +17,6 @@ struct DetailView: View {
         Divider()
         footer(scan, state: state)
       }
-      .alert(
-        "Some items could not be moved to the Trash",
-        isPresented: .init(
-          get: { state.removalError != nil },
-          set: { if !$0 { state.removalError = nil } })
-      ) {
-        Button("OK", role: .cancel) {}
-      } message: {
-        Text(state.removalError ?? "")
-      }
     }
   }
 

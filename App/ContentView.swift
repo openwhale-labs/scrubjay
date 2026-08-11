@@ -91,6 +91,18 @@ struct ContentView: View {
       }
     }
     .frame(minWidth: 720, minHeight: 460)
+    // Every pane writes failures to the same place, so the alert lives
+    // outside the split view rather than in one detail pane.
+    .alert(
+      "Some items could not be moved to the Trash",
+      isPresented: .init(
+        get: { state.removalError != nil },
+        set: { if !$0 { state.removalError = nil } })
+    ) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(state.removalError ?? "")
+    }
     .dropDestination(for: URL.self) { urls, _ in
       guard let url = urls.first(where: { $0.pathExtension == "app" }) else { return false }
       return state.selectApp(at: url)

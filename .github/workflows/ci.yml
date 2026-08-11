@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  engine:
+    name: Engine and CLI
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -18,15 +19,41 @@ jobs:
       - name: Test
         run: swift test
 
+  app:
+    name: App and helper
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      # The app, the privileged helper, and the Sparkle integration live only
+      # in project.yml, so without this job they can break on a green PR and
+      # only surface when cutting a release.
+      - name: Build app and helper
+        run: |
+          xcodebuild -project ScrubJay.xcodeproj -scheme ScrubJay \
+            -configuration Debug -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
+            build
+      - name: Verify the helper is embedded
+        run: |
+          app=$(find . -name 'ScrubJay.app' -path '*Debug*' | head -1)
+          test -x "$app/Contents/Library/HelperTools/dev.openwhale.scrubjay.helper"
+          test -f "$app/Contents/Library/LaunchDaemons/dev.openwhale.scrubjay.helper.plist"
+          echo "helper embedded in $app"
+
   lint:
+    name: Style
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - name: Install SwiftLint
         run: brew install swiftlint
-      # Fails the build on errors only. The design-language rules are
-      # declared as errors, so a stray colour or spacing literal cannot
-      # merge; SwiftUI bodies being long stays a warning worth reading
-      # rather than a wall someone routes around with a disable comment.
+      # Fails on errors only. The design-language rules are declared as
+      # errors, so a stray colour or spacing literal cannot merge; SwiftUI
+      # bodies being long stays a warning worth reading rather than a wall
+      # someone routes around with a disable comment.
       - name: Lint
         run: swiftlint lint --config .swiftlint.yml
