@@ -35,11 +35,12 @@ jobs:
         run: |
           xcodebuild -project ScrubJay.xcodeproj -scheme ScrubJay \
             -configuration Debug -destination 'platform=macOS' \
+            -derivedDataPath .build/CI \
             CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" \
             build
       - name: Verify the helper is embedded
         run: |
-          app=$(find . -name 'ScrubJay.app' -path '*Debug*' | head -1)
+          app=.build/CI/Build/Products/Debug/ScrubJay.app
           test -x "$app/Contents/Library/HelperTools/dev.openwhale.scrubjay.helper"
           test -f "$app/Contents/Library/LaunchDaemons/dev.openwhale.scrubjay.helper.plist"
           echo "helper embedded in $app"
