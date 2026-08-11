@@ -41,9 +41,14 @@ def version() -> str:
 def build() -> None:
     print("==> Generating project and building Release")
     run("xcodegen", "generate")
+    # `generic/platform=macOS` builds for every architecture in ARCHS rather
+    # than just this Mac's; without it xcodebuild quietly produces a thin
+    # binary and Intel users get nothing.
     run(
         "xcodebuild", "-project", str(REPO / "ScrubJay.xcodeproj"), "-scheme", "ScrubJay",
-        "-configuration", "Release", "-derivedDataPath", str(DERIVED), "build",
+        "-configuration", "Release", "-derivedDataPath", str(DERIVED),
+        "-destination", "generic/platform=macOS",
+        "ARCHS=arm64 x86_64", "ONLY_ACTIVE_ARCH=NO", "build",
     )
 
 
