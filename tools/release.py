@@ -47,6 +47,40 @@ def build() -> None:
     )
 
 
+def resign_sparkle() -> None:
+    """Re-sign Sparkle's nested executables with the release identity.
+
+    Xcode signs the framework but not the helper apps, XPC services, and
+    tools inside it, so notarization rejects them. They are signed
+    inside-out, then the app is re-signed so its seal covers the new
+    signatures.
+    """
+    framework = APP / "Contents" / "Frameworks" / "Sparkle.framework"
+    if not framework.exists():
+        return
+    print("==> Re-signing Sparkle components")
+    version = framework / "Versions" / "B"
+    nested = [
+        version / "XPCServices" / "Downloader.xpc",
+        version / "XPCServices" / "Installer.xpc",
+        version / "Updater.app",
+        version / "Autoupdate",
+        framework,
+    ]
+    for path in nested:
+        if not path.exists():
+            continue
+        run(
+            "codesign", "--force", "--sign", IDENTITY, "--timestamp",
+            "--options", "runtime", str(path),
+        )
+    # The app's own seal must be re-established over the changed framework.
+    run(
+        "codesign", "--force", "--sign", IDENTITY, "--timestamp",
+        "--options", "runtime", str(APP),
+    )
+
+
 def verify_app() -> None:
     print("==> Verifying signatures")
     run("codesign", "--verify", "--deep", "--strict", str(APP))
@@ -159,6 +193,7 @@ def main() -> int:
 
     ver = version()
     build()
+    resign_sparkle()
     verify_app()
     dmg = make_dmg(ver, notarized=not args.skip_notarize)
     if args.skip_notarize:
