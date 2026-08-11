@@ -5,13 +5,15 @@ import Foundation
 /// It has exactly one capability — moving system-domain leftovers into the
 /// calling user's Trash. Nothing is ever deleted permanently.
 ///
-/// The security boundary lives here, not in the client: the destination and
-/// the resulting ownership are derived from the connection's own audit
-/// token, and every source path is re-validated against the helper's own
-/// rules. A compromised or buggy client cannot widen either.
+/// The security boundary lives here, not in the client. Two properties hold
+/// no matter what a caller sends:
+///
+/// 1. The destination and the resulting ownership come from the connection's
+///    own audit token, never from the request.
+/// 2. Every filesystem operation runs against file descriptors opened with
+///    `O_NOFOLLOW`, never against path strings. A path checked and then used
+///    can be swapped in between; a descriptor cannot.
 final class HelperService: NSObject, ScrubJayHelperProtocol {
-  /// Identity of the peer, established by the XPC layer rather than claimed
-  /// in the request.
   private let peerUID: uid_t
   private let peerGID: gid_t
 
@@ -28,118 +30,136 @@ final class HelperService: NSObject, ScrubJayHelperProtocol {
     paths: [String], reply: @escaping ([String: String]) -> Void
   ) {
     var failures: [String: String] = [:]
-    let fm = FileManager.default
 
-    guard let trash = trashDirectory() else {
+    guard let trashFD = openTrashDirectory() else {
       reply(Dictionary(uniqueKeysWithValues: paths.map { ($0, "no Trash for the calling user") }))
       scheduleExit()
       return
     }
+    defer { close(trashFD) }
 
     for path in paths {
-      // Authorize and act on the same resolved path — no gap between the
-      // check and the move for a symlink swap to slip through.
-      guard let source = resolvedAllowedSource(path) else {
+      guard let (parent, name) = allowedParentAndName(path) else {
         failures[path] = "outside the allowed system locations"
         continue
       }
-      var destination = trash.appendingPathComponent(source.lastPathComponent)
-      var counter = 1
-      while fm.fileExists(atPath: destination.path) {
-        counter += 1
-        let base = source.deletingPathExtension().lastPathComponent
-        let ext = source.pathExtension
-        let name = ext.isEmpty ? "\(base) \(counter)" : "\(base) \(counter).\(ext)"
-        destination = trash.appendingPathComponent(name)
+      // Open the allow-listed parent itself, so the move is relative to a
+      // descriptor rather than to a name that could change under us.
+      let parentFD = open(parent, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+      guard parentFD >= 0 else {
+        failures[path] = "cannot open \(parent)"
+        continue
       }
-      do {
-        try fm.moveItem(at: source, to: destination)
-        if let failure = chownRecursively(destination) {
-          failures[path] = failure
-        }
-      } catch {
-        failures[path] = error.localizedDescription
+      defer { close(parentFD) }
+
+      // The item itself must not be a symlink.
+      var status = stat()
+      guard fstatat(parentFD, name, &status, AT_SYMLINK_NOFOLLOW) == 0,
+        (status.st_mode & S_IFMT) != S_IFLNK
+      else {
+        failures[path] = "not a regular file or directory"
+        continue
+      }
+
+      let destination = availableName(in: trashFD, preferred: name)
+      guard renameat(parentFD, name, trashFD, destination) == 0 else {
+        failures[path] = String(cString: strerror(errno))
+        continue
+      }
+      let unowned = chownTree(parent: trashFD, name: destination)
+      if unowned > 0 {
+        failures[path] = "moved to the Trash; \(unowned) items still owned by root"
       }
     }
     reply(failures)
     scheduleExit()
   }
 
-  // MARK: Policy
+  // MARK: Destination
 
-  /// The calling user's Trash, derived from their home directory.
-  ///
-  /// The path must be a real directory, never a symlink: a link here would
-  /// redirect a root-privileged move anywhere the link points, which is a
-  /// privilege-escalation primitive rather than a Trash.
-  private func trashDirectory() -> URL? {
+  /// A descriptor for the calling user's Trash, opened without following
+  /// links. Everything downstream is relative to this descriptor, so the
+  /// directory cannot be swapped for a symlink after the check.
+  private func openTrashDirectory() -> Int32? {
     guard let entry = getpwuid(peerUID), let dir = entry.pointee.pw_dir else { return nil }
-    let home = URL(fileURLWithPath: String(cString: dir), isDirectory: true)
-    let trash = home.appendingPathComponent(".Trash", isDirectory: true)
-    guard isRealDirectoryWithoutLinks(trash.path) else { return nil }
-    return trash
+    let home = String(cString: dir)
+    let homeFD = open(home, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+    guard homeFD >= 0 else { return nil }
+    defer { close(homeFD) }
+    let trashFD = openat(homeFD, ".Trash", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+    return trashFD >= 0 ? trashFD : nil
   }
 
-  /// True when the path is a directory and no component of it is a symlink,
-  /// so following it cannot leave the intended location.
-  private func isRealDirectoryWithoutLinks(_ path: String) -> Bool {
-    var status = stat()
-    guard lstat(path, &status) == 0, (status.st_mode & S_IFMT) == S_IFDIR else { return false }
-    return hasNoSymlinkComponents(path)
+  /// A name that does not collide inside the Trash.
+  private func availableName(in trashFD: Int32, preferred: String) -> String {
+    var candidate = preferred
+    var counter = 1
+    let url = URL(fileURLWithPath: preferred)
+    let base = url.deletingPathExtension().lastPathComponent
+    let ext = url.pathExtension
+    while faccessat(trashFD, candidate, F_OK, AT_SYMLINK_NOFOLLOW) == 0 {
+      counter += 1
+      candidate = ext.isEmpty ? "\(base) \(counter)" : "\(base) \(counter).\(ext)"
+    }
+    return candidate
   }
 
-  /// True when the fully resolved path equals the standardized path — i.e.
-  /// no component along the way is a symbolic link. Authorization and the
-  /// move then act on the same real location.
-  private func hasNoSymlinkComponents(_ path: String) -> Bool {
-    guard let resolved = realpath(path, nil) else { return false }
-    defer { free(resolved) }
-    return String(cString: resolved) == URL(fileURLWithPath: path).standardizedFileURL.path
-  }
+  // MARK: Source policy
 
-  /// A source qualifies only when it is a direct child of one of the
-  /// allow-listed roots, contains no symlinked path component, and — under
-  /// /Applications — is a whole `.app` bundle.
-  private func resolvedAllowedSource(_ path: String) -> URL? {
+  /// Split a request into (allow-listed parent, item name), or nil when the
+  /// item is not a direct child of a directory the helper may touch.
+  ///
+  /// The parent is compared for equality against the allow-list — the same
+  /// system roots the scanner reports — so no prefix trickery widens it.
+  private func allowedParentAndName(_ path: String) -> (parent: String, name: String)? {
     let url = URL(fileURLWithPath: path).standardizedFileURL
-    let full = url.path
-
-    // No component may be a link: a link anywhere in the path could point
-    // the privileged move at something else entirely.
-    guard hasNoSymlinkComponents(full) else { return nil }
-
+    let name = url.lastPathComponent
+    guard !name.isEmpty, name != "/", name != ".", name != ".." else { return nil }
     let parent = url.deletingLastPathComponent().path
-    guard !url.lastPathComponent.isEmpty, url.lastPathComponent != "/" else { return nil }
 
     if parent == HelperConstants.applicationsRoot {
       // Whole app bundles only, never their innards or loose files.
-      return url.pathExtension == "app" ? url : nil
+      return url.pathExtension == "app" ? (parent, name) : nil
     }
-    // Direct children of the scanner's own system roots, nothing else.
-    return HelperConstants.allowedLibraryRoots.contains(parent) ? url : nil
+    return HelperConstants.allowedLibraryRoots.contains(parent) ? (parent, name) : nil
   }
 
   // MARK: Ownership
 
-  /// Hand ownership of the moved tree to the calling user.
+  /// Hand the moved tree to the calling user, walking it by descriptor and
+  /// never following a link: `chown(2)` follows symlinks, so a link inside a
+  /// removed bundle could otherwise redirect a root-privileged ownership
+  /// change onto an arbitrary file elsewhere on the system.
   ///
-  /// Uses `lchown`, never `chown`: `chown(2)` follows symbolic links, so a
-  /// link inside a removed bundle could otherwise redirect a root-privileged
-  /// ownership change onto an arbitrary file elsewhere on the system.
-  ///
-  /// - Returns: a message when the item may be unusable from the Trash.
-  private func chownRecursively(_ url: URL) -> String? {
-    var failed = 0
-    if lchown(url.path, peerUID, peerGID) != 0 {
-      return "moved to the Trash, but still owned by root"
+  /// - Returns: how many items could not be handed over.
+  private func chownTree(parent: Int32, name: String) -> Int {
+    var failures = 0
+    if fchownat(parent, name, peerUID, peerGID, AT_SYMLINK_NOFOLLOW) != 0 {
+      failures += 1
     }
-    let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: nil)
-    while let child = enumerator?.nextObject() as? URL {
-      if lchown(child.path, peerUID, peerGID) != 0 {
-        failed += 1
+    var status = stat()
+    guard fstatat(parent, name, &status, AT_SYMLINK_NOFOLLOW) == 0,
+      (status.st_mode & S_IFMT) == S_IFDIR
+    else {
+      return failures
+    }
+    let directoryFD = openat(parent, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+    guard directoryFD >= 0 else { return failures + 1 }
+    guard let handle = fdopendir(directoryFD) else {
+      close(directoryFD)
+      return failures + 1
+    }
+    defer { closedir(handle) }  // closes directoryFD too
+    while let entry = readdir(handle) {
+      let child = withUnsafePointer(to: entry.pointee.d_name) {
+        $0.withMemoryRebound(to: CChar.self, capacity: Int(entry.pointee.d_namlen) + 1) {
+          String(cString: $0)
+        }
       }
+      guard child != ".", child != ".." else { continue }
+      failures += chownTree(parent: directoryFD, name: child)
     }
-    return failed == 0 ? nil : "moved to the Trash; \(failed) items still owned by root"
+    return failures
   }
 
   /// Single-shot: exit after servicing so the next request always runs the
