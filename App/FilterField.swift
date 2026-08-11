@@ -7,9 +7,9 @@ struct FilterField: View {
   @Binding var text: String
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: Theme.Space.xs) {
       Image(systemName: "magnifyingglass")
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.Palette.secondaryText)
       TextField(prompt, text: $text)
         .textFieldStyle(.plain)
       if !text.isEmpty {
@@ -17,14 +17,14 @@ struct FilterField: View {
           text = ""
         } label: {
           Image(systemName: "xmark.circle.fill")
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.Palette.secondaryText)
         }
         .buttonStyle(.plain)
         .help("Clear")
       }
     }
-    .padding(.horizontal, 6)
-    .padding(.vertical, 3)
-    .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+    .padding(.horizontal, Theme.Space.sm)
+    .padding(.vertical, Theme.Space.xs)
+    .background(Theme.Palette.chipFill, in: RoundedRectangle(cornerRadius: Theme.Radius.sm))
   }
 }

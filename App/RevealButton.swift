@@ -11,7 +11,7 @@ struct RevealButton: View {
       NSWorkspace.shared.activateFileViewerSelecting([url])
     } label: {
       Image(systemName: "magnifyingglass.circle")
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.Palette.secondaryText)
     }
     .buttonStyle(.plain)
     .help("Show in Finder")

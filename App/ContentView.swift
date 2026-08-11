@@ -19,32 +19,32 @@ struct ContentView: View {
         }
         Section {
           ForEach(Array(state.filteredApps.enumerated()), id: \.element.id) { index, app in
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Space.md) {
               Image(nsImage: NSWorkspace.shared.icon(forFile: app.bundleURL.path))
                 .resizable()
-                .frame(width: 28, height: 28)
+                .frame(width: Theme.IconSize.sidebar, height: Theme.IconSize.sidebar)
               VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
+                HStack(spacing: Theme.Space.sm) {
                   Text(app.name)
                   // Dock-style running dot; green = alive, the detail pane's
                   // orange banner carries the "quit first" warning.
                   if state.runningBundleIDs.contains(app.bundleID) {
                     Circle()
-                      .fill(.green)
-                      .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 0.5))
-                      .frame(width: 5, height: 5)
+                      .fill(Theme.Palette.running)
+                      .overlay(Circle().stroke(Theme.Palette.dotRing, lineWidth: 0.5))
+                      .frame(width: Theme.Size.statusDot, height: Theme.Size.statusDot)
                       .help("Running — quit before uninstalling")
                   }
                 }
                 Text(app.bundleID)
                   .font(.caption)
-                  .foregroundStyle(.secondary)
+                  .foregroundStyle(Theme.Palette.secondaryText)
               }
               Spacer()
               if let size = state.appSizes[app.bundleID] {
                 Text(FileSize.format(size))
                   .font(.caption)
-                  .foregroundStyle(.secondary)
+                  .foregroundStyle(Theme.Palette.secondaryText)
                   .monospacedDigit()
                   .help("App plus everything it left behind")
               }
@@ -54,7 +54,7 @@ struct ContentView: View {
             // alternating API paints tool rows too.
             .listRowBackground(
               index.isMultiple(of: 2)
-                ? Color.clear : Color.primary.opacity(0.045))
+                ? Color.clear : Theme.Palette.rowStripe)
           }
         } header: {
           HStack {
@@ -64,7 +64,7 @@ struct ContentView: View {
             sortHeader("Size", bySize: true)
           }
           .padding(.trailing, 16)
-          .padding(.bottom, 6)
+          .padding(.bottom, Theme.Space.sm)
         }
       }
       .searchable(text: $state.query, placement: .sidebar, prompt: "Search apps")

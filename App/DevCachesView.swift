@@ -13,18 +13,18 @@ struct DevCachesView: View {
       let selected = caches.filter(\.isSelected)
       let selectedSize = selected.compactMap(\.status.sizeBytes).reduce(0, +)
       VStack(spacing: 0) {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
           Text("Developer caches").font(.title2.bold())
           Text("Everything here is re-downloaded or rebuilt on demand. Nothing is selected for you.")
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.Palette.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         Divider()
         List {
           ForEach(caches) { cache in
-            HStack(spacing: 8) {
+            HStack(spacing: Theme.Space.md) {
               Toggle("", isOn: .init(
                 get: { state.devCaches?.first(where: { $0.id == cache.id })?.isSelected ?? false },
                 set: { value in
@@ -41,7 +41,7 @@ struct DevCachesView: View {
         Divider()
         HStack {
           Text("\(selected.count) selected · \(FileSize.format(selectedSize))")
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.Palette.secondaryText)
           Spacer()
           Button("Move to Trash…") { confirming = true }
             .keyboardShortcut(.defaultAction)
@@ -65,20 +65,20 @@ struct DevCachesView: View {
   }
 
   private func cacheRow(_ status: DevCacheStatus) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Theme.Space.md) {
       Image(systemName: "folder")
-        .frame(width: 22)
-        .foregroundStyle(.secondary)
+        .frame(width: Theme.IconSize.row)
+        .foregroundStyle(Theme.Palette.secondaryText)
       VStack(alignment: .leading, spacing: 1) {
         Text(status.location.name)
         Text(status.location.detail)
           .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
       }
       Spacer()
       if let size = status.sizeBytes {
         Text(FileSize.format(size))
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
           .monospacedDigit()
       }
       RevealButton(url: status.location.url)

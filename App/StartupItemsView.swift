@@ -11,13 +11,13 @@ struct StartupItemsView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: Theme.Space.xs) {
         Text("Startup items").font(.title2.bold())
         Text(
           "Login items and background services registered by apps that are no longer installed."
         )
         .font(.callout)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.Palette.secondaryText)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding()
@@ -67,32 +67,32 @@ struct StartupItemsView: View {
   private func list(_ stale: [StaleBackgroundItem]) -> some View {
     List {
       ForEach(stale) { entry in
-        HStack(spacing: 8) {
+        HStack(spacing: Theme.Space.md) {
           Image(systemName: entry.item.isEnabled ? "power.circle.fill" : "power.circle")
             .foregroundStyle(entry.item.isEnabled ? .orange : .secondary)
             .help(entry.item.isEnabled ? "Still switched on" : "Switched off")
           VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 6) {
+            HStack(spacing: Theme.Space.sm) {
               Text(entry.item.name)
               Text(entry.item.kind)
                 .font(.caption2)
-                .padding(.horizontal, 5)
+                .padding(.horizontal, Theme.Space.sm)
                 .padding(.vertical, 1)
-                .background(.quaternary, in: Capsule())
-                .foregroundStyle(.secondary)
+                .background(Theme.Palette.chipFill, in: Capsule())
+                .foregroundStyle(Theme.Palette.secondaryText)
             }
             Text(
               entry.reason == .appInTrash
                 ? "Its app is in the Trash" : "Its app is gone"
             )
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(Theme.Palette.secondaryText)
           }
           Spacer()
           if let developer = entry.item.developer {
             Text(developer)
               .font(.caption)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(Theme.Palette.secondaryText)
           }
         }
       }
@@ -100,22 +100,22 @@ struct StartupItemsView: View {
   }
 
   private func footer(_ stale: [StaleBackgroundItem]) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Theme.Space.md) {
       HStack(alignment: .top, spacing: 8) {
-        Image(systemName: "info.circle").foregroundStyle(.secondary)
+        Image(systemName: "info.circle").foregroundStyle(Theme.Palette.secondaryText)
         Text(
           "\(stale.count) of \(state.backgroundItemsTotal) items. These entries outlive the app and even an emptied Trash, and macOS offers no way to remove them one at a time."
         )
         .font(.caption)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.Palette.secondaryText)
       }
-      HStack(spacing: 6) {
+      HStack(spacing: Theme.Space.sm) {
         Text("Reset every startup item at once, then re-approve the apps you keep:")
           .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
         CommandChip(command: "sudo sfltool resetbtm")
       }
-      .padding(.leading, 22)
+      .padding(.leading, Theme.IconSize.row)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding()

@@ -33,11 +33,11 @@ struct DetailView: View {
   // MARK: Header
 
   private func header(_ scan: ScanResult) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
-      HStack(spacing: 8) {
+    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+      HStack(spacing: Theme.Space.md) {
         Text(scan.app.name).font(.title2.bold())
         if let version = scan.app.version {
-          Text(version).foregroundStyle(.secondary)
+          Text(version).foregroundStyle(Theme.Palette.secondaryText)
         }
         Spacer()
         Picker("", selection: $sortBySize) {
@@ -50,23 +50,23 @@ struct DetailView: View {
       }
       Text(scan.app.bundleID)
         .font(.callout)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(Theme.Palette.secondaryText)
       if scan.isAppRunning {
           Label(
             "This app is running. Quit it before uninstalling.",
             systemImage: "exclamationmark.triangle"
           )
           .font(.callout)
-          .foregroundStyle(.orange)
-          .padding(.top, 4)
+          .foregroundStyle(Theme.Palette.caution)
+          .padding(.top, Theme.Space.xs)
         }
         if scan.holdsChatHistory {
           Label(
             "This app keeps chat history on this Mac. Its data folders start unselected — back them up first if you may ever need them.",
             systemImage: "bubble.left.and.exclamationmark.bubble.right")
             .font(.callout)
-            .foregroundStyle(.red)
-            .padding(.top, 4)
+            .foregroundStyle(Theme.Palette.danger)
+            .padding(.top, Theme.Space.xs)
         }
         if let cask = scan.caskToken {
           brewHint(cask)
@@ -80,7 +80,7 @@ struct DetailView: View {
   }
 
   private var helperHint: some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Theme.Space.sm) {
       Image(systemName: "shield")
       if state.helper.status == .enabled {
         Text("System-level items are removed through the ScrubJay helper.")
@@ -94,19 +94,19 @@ struct DetailView: View {
       }
     }
     .font(.callout)
-    .foregroundStyle(.secondary)
-    .padding(.top, 4)
+    .foregroundStyle(Theme.Palette.secondaryText)
+    .padding(.top, Theme.Space.xs)
   }
 
   private func brewHint(_ cask: String) -> some View {
-    HStack(spacing: 6) {
+    HStack(spacing: Theme.Space.sm) {
       Image(systemName: "shippingbox")
       Text("Installed via Homebrew — after removal, clear its records:")
       CommandChip(command: "brew uninstall --cask \(cask)")
     }
     .font(.callout)
-    .foregroundStyle(.secondary)
-    .padding(.top, 4)
+    .foregroundStyle(Theme.Palette.secondaryText)
+    .padding(.top, Theme.Space.xs)
   }
 
   // MARK: Checklist
@@ -174,52 +174,52 @@ struct DetailView: View {
     isOn: Binding<Bool>, url: URL, size: Int64?, flagged: Bool,
     agent: LaunchAgentInfo?, confidenceTag: String?
   ) -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: Theme.Space.md) {
       Toggle("", isOn: isOn)
         .labelsHidden()
         .toggleStyle(.checkbox)
       Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
         .resizable()
-        .frame(width: 22, height: 22)
+        .frame(width: Theme.IconSize.row, height: Theme.IconSize.row)
       VStack(alignment: .leading, spacing: 1) {
-        HStack(spacing: 4) {
+        HStack(spacing: Theme.Space.xs) {
           Text(url.lastPathComponent).lineLimit(1).truncationMode(.middle)
           if let confidenceTag {
             Text(confidenceTag)
               .font(.caption2)
-              .padding(.horizontal, 5)
+              .padding(.horizontal, Theme.Space.sm)
               .padding(.vertical, 1)
-              .background(.quaternary, in: Capsule())
-              .foregroundStyle(.secondary)
+              .background(Theme.Palette.chipFill, in: Capsule())
+              .foregroundStyle(Theme.Palette.secondaryText)
           }
           if flagged {
             Image(systemName: "questionmark.circle")
-              .foregroundStyle(.orange)
+              .foregroundStyle(Theme.Palette.caution)
               .help("Matched by app name — double-check before removing.")
           }
           if let agent, agent.isLoaded {
             Label("active", systemImage: "bolt.fill")
               .font(.caption)
-              .foregroundStyle(.orange)
+              .foregroundStyle(Theme.Palette.caution)
               .help("Launch agent \(agent.label) is loaded; it is unloaded before removal.")
           }
           if LeftoverCatalog.isSystemPath(url) {
             Image(systemName: "shield")
               .font(.caption)
-              .foregroundStyle(.secondary)
+              .foregroundStyle(Theme.Palette.secondaryText)
               .help("System item — removal goes through the privileged helper.")
           }
         }
         Text(abbreviatedParent(of: url))
           .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
           .lineLimit(1)
           .truncationMode(.middle)
       }
       Spacer()
       if let size {
         Text(FileSize.format(size))
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
           .monospacedDigit()
       }
       RevealButton(url: url)
@@ -271,8 +271,8 @@ struct DetailView: View {
       .toggleStyle(.checkbox)
       .help("Everything, including loosely matched items — review those before removing.")
       Text("\(scan.selectedCount) items · \(FileSize.format(scan.selectedSize))")
-        .foregroundStyle(.secondary)
-        .padding(.leading, 8)
+        .foregroundStyle(Theme.Palette.secondaryText)
+        .padding(.leading, Theme.Space.md)
       Spacer()
       if state.isRemoving {
         ProgressView().controlSize(.small).padding(.trailing, 4)

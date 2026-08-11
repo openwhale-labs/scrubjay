@@ -32,18 +32,18 @@ struct OrphansView: View {
       let selected = orphans.filter(\.isSelected)
       let selectedSize = selected.compactMap(\.item.sizeBytes).reduce(0, +)
       VStack(spacing: 0) {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
           HStack {
             Text("Orphaned leftovers").font(.title2.bold())
             Spacer()
             FilterField(prompt: "Filter", text: $filter)
-              .frame(width: 200)
+              .frame(width: Theme.Size.filterField)
           }
           Text(
             "Files keyed by bundle identifiers that no installed app claims — usually traces of uninstalled apps. Inspect with the magnifier; nothing is selected for you."
           )
           .font(.callout)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -79,8 +79,8 @@ struct OrphansView: View {
           )
           .toggleStyle(.checkbox)
           Text("\(selected.count) selected · \(FileSize.format(selectedSize))")
-            .foregroundStyle(.secondary)
-            .padding(.leading, 8)
+            .foregroundStyle(Theme.Palette.secondaryText)
+            .padding(.leading, Theme.Space.md)
           Spacer()
           Button("Move to Trash…") { confirming = true }
             .keyboardShortcut(.defaultAction)
@@ -127,25 +127,25 @@ struct OrphansView: View {
 
   private func orphanRow(_ entry: SelectableItem) -> some View {
     let item = entry.item
-    return HStack(spacing: 8) {
+    return HStack(spacing: Theme.Space.md) {
       Toggle("", isOn: selectionBinding(for: entry.id))
         .labelsHidden()
         .toggleStyle(.checkbox)
       Image(nsImage: NSWorkspace.shared.icon(forFile: item.url.path))
         .resizable()
-        .frame(width: 22, height: 22)
+        .frame(width: Theme.IconSize.row, height: Theme.IconSize.row)
       VStack(alignment: .leading, spacing: 1) {
         Text(item.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
         Text(abbreviatedParent(of: item.url))
           .font(.caption)
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
           .lineLimit(1)
           .truncationMode(.middle)
       }
       Spacer()
       if let size = item.sizeBytes {
         Text(FileSize.format(size))
-          .foregroundStyle(.secondary)
+          .foregroundStyle(Theme.Palette.secondaryText)
           .monospacedDigit()
       }
       RevealButton(url: item.url)
