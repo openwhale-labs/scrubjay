@@ -26,6 +26,8 @@ targets:
         OTHER_CODE_SIGN_FLAGS: "-i dev.openwhale.scrubjay.helper"
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: 6.0
+        ARCHS: "$(ARCHS_STANDARD)"
+        ONLY_ACTIVE_ARCH: NO
       configs:
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
@@ -66,6 +68,8 @@ targets:
         DEVELOPMENT_TEAM: 67ULUSQ947
         ENABLE_HARDENED_RUNTIME: YES
         SWIFT_VERSION: 6.0
+        ARCHS: "$(ARCHS_STANDARD)"
+        ONLY_ACTIVE_ARCH: NO
       configs:
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO

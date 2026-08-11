@@ -97,6 +97,17 @@ def verify_app() -> None:
         found = sorted(p.name for p in directory.iterdir())
         if found != [expected.name]:
             raise SystemExit(f"unexpected contents in {directory}: {found}")
+    # Both architectures must ship: the site promises Apple Silicon and
+    # Intel, and a thin binary would quietly break half of that.
+    for binary in (
+        APP / "Contents" / "MacOS" / "ScrubJay",
+        helper,
+    ):
+        archs = run("lipo", "-archs", str(binary)).split()
+        if sorted(archs) != ["arm64", "x86_64"]:
+            raise SystemExit(f"not a universal binary ({' '.join(archs)}): {binary}")
+    print("    universal: arm64 + x86_64")
+
     for target in (str(APP), str(helper)):
         info = run("codesign", "-dv", target)
         if "67ULUSQ947" not in info:
