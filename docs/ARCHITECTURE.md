@@ -47,6 +47,17 @@ Two hazards observed on real machines are handled in the scanner, both biased to
 - **Group containers.** Entries are team-ID-prefixed (`5A4RE8SF68.com.tencent.xinWeChat`); matching strips the team ID and always reports at `low`, because a group container may be shared by the vendor's other apps.
 - **Launch agents.** Unloading (`launchctl bootout`) is a behavior change beyond the Trash model, so it requires the plist's own `Label` to carry the target's bundle ID — a matched file name is not enough.
 
+## The privileged helper
+
+System-domain leftovers (`/Library/...`, root-owned app bundles) need root to remove, so the app registers a launchd daemon through `SMAppService` and talks to it over XPC. A root daemon that moves files is the highest-risk code in the project, and it holds to four rules:
+
+1. **The daemon is the boundary, not the app.** The destination Trash and the resulting ownership come from the connection's audit token — they are not parameters. A compromised client cannot redirect a privileged move.
+2. **Descriptors, never paths.** The Trash is opened once with `O_NOFOLLOW`; moves are `renameat` between descriptors, ownership is `fchownat(..., AT_SYMLINK_NOFOLLOW)`, and directory recursion is `openat` + `fdopendir`. A path that is checked and later re-resolved can be swapped in between; a descriptor cannot.
+3. **An allow-list, not a prefix.** Sources must be direct children of the scanner's own system roots (or a whole `.app` under `/Applications`), compared by parent equality. `/Library/Keychains` and friends are unreachable by construction, and `HelperPolicyTests` fails the build if the allow-list and the scanner's roots ever diverge.
+4. **Still only the Trash.** The helper moves; it never deletes. Ownership is handed to the calling user so the items stay restorable.
+
+Rules 1–3 each replaced an earlier version that looked correct and was not: a client-supplied destination, `chown` following a symlink into `/etc`, a prefix match that left `/Library/Keychains/System.keychain` reachable, and a `fileExists` check with a TOCTOU window behind it. The end-to-end test that pins rule 2 is a directory containing a symlink to `/etc/hosts`: after removal the link itself changes owner and `/etc/hosts` does not.
+
 ## Known hazards (open work)
 
 - **Removing a shared group container** while sibling apps remain installed. Reported at `low` today; a real ownership model is future work.
