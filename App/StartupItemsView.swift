@@ -103,7 +103,7 @@ struct StartupItemsView: View {
     HStack(alignment: .top, spacing: 8) {
       Image(systemName: "info.circle").foregroundStyle(.secondary)
       Text(
-        "\(stale.count) of \(state.backgroundItemsTotal) items. macOS keeps these registered and offers no way to remove them one at a time. Resetting every startup item at once is possible from Terminal, after which you re-approve the apps you keep."
+        "\(stale.count) of \(state.backgroundItemsTotal) items. These entries outlive the app and even an emptied Trash, and macOS offers no way to remove them one at a time. Resetting every startup item at once is possible from Terminal, after which you re-approve the apps you keep."
       )
       .font(.caption)
       .foregroundStyle(.secondary)

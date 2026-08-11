@@ -48,9 +48,10 @@ struct Startup: ParsableCommand {
     print(
       """
 
-      \(stale.count) items. macOS keeps these registered and offers no way to \
-      remove them one by one. To reset every login item on this Mac at once: \
-      sudo sfltool resetbtm (you will re-approve the apps you keep).
+      \(stale.count) items. These entries outlive the app and even an emptied \
+      Trash, and macOS offers no way to remove them one by one. To reset every \
+      login item on this Mac at once: sudo sfltool resetbtm (you will \
+      re-approve the apps you keep).
       """)
   }
 }
