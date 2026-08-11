@@ -99,24 +99,10 @@ struct DetailView: View {
   }
 
   private func brewHint(_ cask: String) -> some View {
-    let command = "brew uninstall --cask \(cask)"
-    return HStack(spacing: 6) {
+    HStack(spacing: 6) {
       Image(systemName: "shippingbox")
       Text("Installed via Homebrew — after removal, clear its records:")
-      Text(command)
-        .font(.system(.caption, design: .monospaced))
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(.quaternary, in: RoundedRectangle(cornerRadius: 5))
-        .textSelection(.enabled)
-      Button {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(command, forType: .string)
-      } label: {
-        Image(systemName: "doc.on.doc")
-      }
-      .buttonStyle(.plain)
-      .help("Copy command")
+      CommandChip(command: "brew uninstall --cask \(cask)")
     }
     .font(.callout)
     .foregroundStyle(.secondary)

@@ -100,20 +100,24 @@ struct StartupItemsView: View {
   }
 
   private func footer(_ stale: [StaleBackgroundItem]) -> some View {
-    HStack(alignment: .top, spacing: 8) {
-      Image(systemName: "info.circle").foregroundStyle(.secondary)
-      Text(
-        "\(stale.count) of \(state.backgroundItemsTotal) items. These entries outlive the app and even an emptied Trash, and macOS offers no way to remove them one at a time. Resetting every startup item at once is possible from Terminal, after which you re-approve the apps you keep."
-      )
-      .font(.caption)
-      .foregroundStyle(.secondary)
-      Spacer()
-      Button("Copy reset command") {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString("sudo sfltool resetbtm", forType: .string)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(alignment: .top, spacing: 8) {
+        Image(systemName: "info.circle").foregroundStyle(.secondary)
+        Text(
+          "\(stale.count) of \(state.backgroundItemsTotal) items. These entries outlive the app and even an emptied Trash, and macOS offers no way to remove them one at a time."
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
       }
-      .controlSize(.small)
+      HStack(spacing: 6) {
+        Text("Reset every startup item at once, then re-approve the apps you keep:")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        CommandChip(command: "sudo sfltool resetbtm")
+      }
+      .padding(.leading, 22)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding()
   }
 }
