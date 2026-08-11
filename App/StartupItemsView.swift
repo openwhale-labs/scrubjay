@@ -83,7 +83,7 @@ struct StartupItemsView: View {
             }
             Text(
               entry.reason == .appInTrash
-                ? "Its app is in the Trash" : "Its app is missing"
+                ? "Its app is in the Trash" : "Its app is gone"
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -103,7 +103,7 @@ struct StartupItemsView: View {
     HStack(alignment: .top, spacing: 8) {
       Image(systemName: "info.circle").foregroundStyle(.secondary)
       Text(
-        "\(stale.count) of \(state.backgroundItemsTotal) items. Emptying the Trash clears the ones whose app is still in it. macOS has no way to remove the rest individually — resetting every startup item at once is possible from Terminal, after which you re-approve the apps you keep."
+        "\(stale.count) of \(state.backgroundItemsTotal) items. macOS keeps these registered and offers no way to remove them one at a time. Resetting every startup item at once is possible from Terminal, after which you re-approve the apps you keep."
       )
       .font(.caption)
       .foregroundStyle(.secondary)

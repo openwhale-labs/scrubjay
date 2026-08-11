@@ -39,7 +39,7 @@ struct Startup: ParsableCommand {
     print("Left behind by apps that are gone:")
     for entry in stale {
       let state = entry.item.isEnabled ? "on " : "off"
-      let why = entry.reason == .appInTrash ? "app is in the Trash" : "app is missing"
+      let why = entry.reason == .appInTrash ? "app is in the Trash" : "app is gone"
       print("  [\(state)] \(entry.item.name)  (\(entry.item.kind)) — \(why)")
       if let path = entry.item.url?.path {
         print("        \(path)")
@@ -48,10 +48,9 @@ struct Startup: ParsableCommand {
     print(
       """
 
-      \(stale.count) items. macOS offers no way to remove them one by one — \
-      emptying the Trash clears the ones whose app is still in it. To reset \
-      every login item on this Mac at once: sudo sfltool resetbtm (you will \
-      re-approve the apps you keep).
+      \(stale.count) items. macOS keeps these registered and offers no way to \
+      remove them one by one. To reset every login item on this Mac at once: \
+      sudo sfltool resetbtm (you will re-approve the apps you keep).
       """)
   }
 }

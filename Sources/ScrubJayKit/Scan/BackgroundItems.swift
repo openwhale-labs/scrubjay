@@ -148,13 +148,14 @@ public enum BackgroundItems {
       .appendingPathComponent(".Trash", isDirectory: true)).standardizedFileURL.path
     return items.compactMap { item in
       guard let url = item.url else { return nil }
+      let exists = FileManager.default.fileExists(atPath: url.path)
+      // Location alone does not decide it: after the Trash is emptied the
+      // database still points into it, and calling that "in the Trash"
+      // would send the user looking for something already gone.
       if url.path.hasPrefix(trashPath + "/") {
-        return StaleBackgroundItem(item: item, reason: .appInTrash)
+        return StaleBackgroundItem(item: item, reason: exists ? .appInTrash : .appMissing)
       }
-      if !FileManager.default.fileExists(atPath: url.path) {
-        return StaleBackgroundItem(item: item, reason: .appMissing)
-      }
-      return nil
+      return exists ? nil : StaleBackgroundItem(item: item, reason: .appMissing)
     }
   }
 }

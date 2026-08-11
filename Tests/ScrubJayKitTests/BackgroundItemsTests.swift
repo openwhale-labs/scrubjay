@@ -24,7 +24,7 @@ struct BackgroundItemsTests {
                      Type: app (0x2)
               Disposition: [disabled, allowed, not notified] (0x2)
                Identifier: 2.com.gone.app
-                      URL: file:///Users/tester/.Trash/Gone.app/
+                      URL: file://TRASH_PATH/Gone.app/
         Bundle Identifier: com.gone.app
 
      #3:
@@ -48,18 +48,24 @@ struct BackgroundItemsTests {
         Bundle Identifier: com.present.app
     """
 
-  func fixture() throws -> (dump: String, home: URL) {
-    // A real directory stands in for the installed app, so "still present"
-    // is decided by the filesystem rather than by the test's wishes.
+  /// Real directories stand in for the installed app and for a Trash that
+  /// still holds a removed one, so "present" and "in the Trash" are decided
+  /// by the filesystem rather than by the test's wishes.
+  func fixture() throws -> (dump: String, home: URL, trash: URL) {
     let home = FileManager.default.temporaryDirectory
       .appendingPathComponent("scrubjay-btm-\(UUID().uuidString)", isDirectory: true)
-    let present = home.appendingPathComponent("Present.app", isDirectory: true)
-    try FileManager.default.createDirectory(at: present, withIntermediateDirectories: true)
-    return (dump.replacingOccurrences(of: "/PRESENT_PATH/", with: present.path + "/"), home)
+    let trash = home.appendingPathComponent("Trash", isDirectory: true)
+    for path in [home.appendingPathComponent("Present.app"), trash.appendingPathComponent("Gone.app")] {
+      try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true)
+    }
+    let text = dump
+      .replacingOccurrences(of: "/PRESENT_PATH/", with: home.appendingPathComponent("Present.app").path + "/")
+      .replacingOccurrences(of: "TRASH_PATH", with: trash.path)
+    return (text, home, trash)
   }
 
   @Test func parsesItemsAndSkipsDeveloperRows() throws {
-    let (text, home) = try fixture()
+    let (text, home, trash) = try fixture()
     defer { try? FileManager.default.removeItem(at: home) }
 
     let items = BackgroundItems.parse(dump: text)
@@ -68,43 +74,58 @@ struct BackgroundItemsTests {
   }
 
   @Test func resolvesRelativeChildAgainstItsParentBundle() throws {
-    let (text, home) = try fixture()
+    let (text, home, trash) = try fixture()
     defer { try? FileManager.default.removeItem(at: home) }
 
     let launcher = BackgroundItems.parse(dump: text).first { $0.name == "Gone Launcher" }
     #expect(
       launcher?.url?.path
-        == "/Users/tester/.Trash/Gone.app/Contents/Library/LoginItems/Gone Launcher.app")
+        == trash.appendingPathComponent("Gone.app/Contents/Library/LoginItems/Gone Launcher.app").path)
     #expect(launcher?.isEnabled == true)
     #expect(launcher?.kind == "login")
   }
 
   @Test func flagsItemsWhoseAppSitsInTheTrash() throws {
-    let (text, home) = try fixture()
+    let (text, home, trash) = try fixture()
     defer { try? FileManager.default.removeItem(at: home) }
 
     let items = BackgroundItems.parse(dump: text)
-    let stale = BackgroundItems.stale(
-      in: items, trash: URL(fileURLWithPath: "/Users/tester/.Trash"))
+    let stale = BackgroundItems.stale(in: items, trash: trash)
     #expect(stale.map(\.item.name).sorted() == ["Gone", "Gone Launcher"])
-    #expect(stale.allSatisfy { $0.reason == .appInTrash })
+    // The bundle itself is still in the Trash; its login item is inside it
+    // and therefore gone with it.
+    #expect(stale.first { $0.item.name == "Gone" }?.reason == .appInTrash)
   }
 
   @Test func installedAppsAreNotFlagged() throws {
-    let (text, home) = try fixture()
+    let (text, home, trash) = try fixture()
     defer { try? FileManager.default.removeItem(at: home) }
 
-    let stale = BackgroundItems.stale(
-      in: BackgroundItems.parse(dump: text),
-      trash: URL(fileURLWithPath: "/Users/tester/.Trash"))
+    let stale = BackgroundItems.stale(in: BackgroundItems.parse(dump: text), trash: trash)
     #expect(!stale.contains { $0.item.name == "Present" })
   }
 
+  @Test func emptiedTrashReadsAsMissingNotAsInTheTrash() throws {
+    // The database keeps pointing into the Trash after it is emptied.
+    let (text, home, trash) = try fixture()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let emptied = home.appendingPathComponent("EmptyTrash", isDirectory: true)
+    try FileManager.default.createDirectory(at: emptied, withIntermediateDirectories: true)
+    let dump = text.replacingOccurrences(
+      of: "file://\(trash.path)/Gone.app/", with: "file://\(emptied.path)/Gone.app/")
+
+    let stale = BackgroundItems.stale(in: BackgroundItems.parse(dump: dump), trash: emptied)
+    let gone = stale.first { $0.item.name == "Gone" }
+    #expect(gone?.reason == .appMissing)
+  }
+
   @Test func missingAppsAreFlaggedSeparately() throws {
-    let text = dump.replacingOccurrences(of: "/PRESENT_PATH/", with: "/nowhere/Present.app/")
+    let text = dump
+      .replacingOccurrences(of: "/PRESENT_PATH/", with: "/nowhere/Present.app/")
+      .replacingOccurrences(of: "TRASH_PATH", with: "/nowhere/.Trash")
     let stale = BackgroundItems.stale(
-      in: BackgroundItems.parse(dump: text),
-      trash: URL(fileURLWithPath: "/Users/tester/.Trash"))
+      in: BackgroundItems.parse(dump: text), trash: URL(fileURLWithPath: "/nowhere/.Trash"))
     let present = stale.first { $0.item.name == "Present" }
     #expect(present?.reason == .appMissing)
   }
