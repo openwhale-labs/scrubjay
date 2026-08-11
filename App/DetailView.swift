@@ -51,7 +51,7 @@ struct DetailView: View {
       Text(scan.app.bundleID)
         .font(.callout)
         .foregroundStyle(Theme.Palette.secondaryText)
-      if scan.isAppRunning {
+      if state.runningBundleIDs.contains(scan.app.bundleID) {
           Label(
             "This app is running. Quit it before uninstalling.",
             systemImage: "exclamationmark.triangle"
@@ -284,7 +284,8 @@ struct DetailView: View {
         .keyboardShortcut(.defaultAction)
         .disabled(
           state.isRemoving || scan.selectedCount == 0
-            || (scan.appBundleSelected && scan.isAppRunning))
+            || (scan.appBundleSelected
+              && state.runningBundleIDs.contains(scan.app.bundleID)))
     }
     .padding()
     .confirmationDialog(

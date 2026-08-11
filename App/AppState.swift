@@ -130,15 +130,27 @@ final class AppState {
     caskAppNames = Set(
       await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
     refreshRunningApps()
-    // Footprints are cosmetic — sweep in the background, one app at a time,
-    // so numbers fill in progressively without holding anything up.
     sizeSweepGeneration += 1
     let sweep = sizeSweepGeneration
     let snapshot = apps
     Task {
+      // Bundle sizes first: one directory walk each, so the sidebar has
+      // numbers within a second rather than after a full-disk sweep.
+      let bundleSizes = await Task.detached(priority: .utility) {
+        Dictionary(
+          uniqueKeysWithValues: snapshot.map {
+            ($0.bundleID, FileSize.allocatedSize(at: $0.bundleURL) ?? 0)
+          })
+      }.value
+      guard sweep == self.sizeSweepGeneration else { return }
+      self.appSizes = bundleSizes
+
+      // Then refine to the real footprint, app by app at low priority. This
+      // scans every search root per app, so it must never block the list or
+      // outlive the selection that started it.
       let identities = snapshot.map(\.identity)
       for app in snapshot {
-        let total = await Task.detached {
+        let total = await Task.detached(priority: .background) {
           let bundle = FileSize.allocatedSize(at: app.bundleURL) ?? 0
           let leftovers = LeftoverScanner.forCurrentUser()
             .scan(for: app.identity, amongInstalled: identities)
@@ -230,6 +242,15 @@ final class AppState {
     guard current.app.bundleID == selectedBundleID else { return }
     guard !current.app.isAppleApp else {
       removalError = "Apple applications cannot be removed."
+      return
+    }
+    // The scan's snapshot may be minutes old — the user could have launched
+    // the app since. Removing a running bundle leaves a half-deleted app.
+    refreshRunningApps()
+    if current.appBundleSelected, runningBundleIDs.contains(current.app.bundleID) {
+      current.isAppRunning = true
+      scan = current
+      removalError = "\(current.app.name) is running. Quit it first."
       return
     }
     let generation = loadGeneration
