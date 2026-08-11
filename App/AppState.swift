@@ -83,8 +83,6 @@ final class AppState {
   var lastRemovalNote: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
   var runningBundleIDs: Set<String> = []
-  /// App bundle file names owned by Homebrew casks, for the sidebar badge.
-  var caskAppNames: Set<String> = []
   /// Total footprint per app — bundle plus every matched leftover —
   /// computed in the background after the list loads.
   var appSizes: [String: Int64] = [:]
@@ -127,8 +125,6 @@ final class AppState {
 
   func loadApps() async {
     apps = await Task.detached { AppInventory.discoverApps().filter { !$0.isAppleApp } }.value
-    caskAppNames = Set(
-      await Task.detached { Homebrew.installedCasks() }.value.flatMap(\.appNames))
     refreshRunningApps()
     sizeSweepGeneration += 1
     let sweep = sizeSweepGeneration

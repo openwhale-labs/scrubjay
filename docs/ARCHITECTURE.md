@@ -4,7 +4,7 @@
 
 - Uninstall an app and the files it leaves behind, with nothing deleted permanently — everything goes to the Trash.
 - One job done well. No system "optimization", no telemetry, no background daemons beyond what a feature strictly needs.
-- The engine is a library (`ScrubJayKit`) with no UI dependencies, consumed by a CLI today and a SwiftUI app next.
+- The engine is a library (`ScrubJayKit`) with no UI dependencies, consumed by both the CLI and the app.
 
 ## Layers
 
@@ -56,31 +56,13 @@ System-domain leftovers (`/Library/...`, root-owned app bundles) need root to re
 3. **An allow-list, not a prefix.** Sources must be direct children of the scanner's own system roots (or a whole `.app` under `/Applications`), compared by parent equality. `/Library/Keychains` and friends are unreachable by construction, and `HelperPolicyTests` fails the build if the allow-list and the scanner's roots ever diverge.
 4. **Still only the Trash.** The helper moves; it never deletes. Ownership is handed to the calling user so the items stay restorable.
 
-Rules 1–3 each replaced an earlier version that looked correct and was not: a client-supplied destination, `chown` following a symlink into `/etc`, a prefix match that left `/Library/Keychains/System.keychain` reachable, and a `fileExists` check with a TOCTOU window behind it. The end-to-end test that pins rule 2 is a directory containing a symlink to `/etc/hosts`: after removal the link itself changes owner and `/etc/hosts` does not.
+These rules are load-bearing rather than stylistic. A destination taken from the request turns the daemon into a general-purpose file mover; `chown` following a symlink hands ownership of arbitrary files to the caller; a prefix match instead of an allow-list leaves `/Library/Keychains` reachable; a path checked and then re-resolved can be swapped in between.
 
 ## Known hazards (open work)
 
 - **Removing a shared group container** while sibling apps remain installed. Reported at `low` today; a real ownership model is future work.
 
-## Decision record — council review of the privileged helper, 2026-08-11
-
-Status: frozen 2026-08-11. Three rounds against the shipped 0.1.0 increment; both reviewers verified the last round closed and found no new P0. Every finding that survived was a real defect in code that had already passed a previous round — the helper's four rules above are the residue. Rule 2 also carries an end-to-end proof on a real machine, not just a reading of the source.
-
-## Decision record — council review, 2026-08-10
-
-Status: frozen 2026-08-10 (both reviewers verified all findings closed, no new P0).
-
-Two independent reviews (baseline `0cf12ea`) drove these changes, all landed:
-
-- Scan generation token: a stale scan can no longer be shown for, or removed as, the newer selection; removal re-asserts the plan belongs to the currently selected app.
-- Apple applications are refused on every removal path, including drag-and-drop (previously CLI-only).
-- Chat-data protection extends to the CLI (`--include-chat-data` to override).
-- Unknown-suffix downgrade, ambiguous-name skip, group-container matching, and the launch-agent Label guard (see attribution defenses above).
-- `Trasher` resolves symlinks before the protected-path check.
-
-Owner rulings (2026-08-10): Select all excludes `low` items — weak attributions stay opt-in, one by one; the chat-app list stays curated best-effort rather than fail-closed. App-layer state-machine tests remain scheduled work, awaiting an injectable engine boundary.
-
 ## Roadmap
 
-1. System-level roots (`/Library/...`) behind a privileged helper.
-2. Distribution: Developer ID signing, notarization, Sparkle updates.
+1. An ownership model for shared group containers.
+2. Removing stale background-item records, if macOS ever exposes an API for it.

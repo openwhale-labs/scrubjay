@@ -37,6 +37,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the engine design, the conf
 - macOS 14 or later
 - Swift 6.0 toolchain to build from source
 
+## Contributing
+
+Bug reports and patches are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for
+how to build the app and what a change should carry. Security issues go through
+[SECURITY.md](SECURITY.md) rather than a public issue.
+
 ## License
 
-Apache 2.0 with the Commons Clause: use, modify, and redistribute freely; selling ScrubJay, or a product whose value derives substantially from it, is not permitted. See [LICENSE](LICENSE).
+Source-available, not open source in the OSI sense: Apache 2.0 with the
+[Commons Clause](https://commonsclause.com/). Read it, change it, run it,
+redistribute it — selling ScrubJay, or a product whose value derives
+substantially from it, is not permitted. See [LICENSE](LICENSE).

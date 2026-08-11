@@ -11,6 +11,7 @@ import SwiftUI
 struct CommandChip: View {
   let command: String
   @State private var copied = false
+  @State private var copyCount = 0
 
   var body: some View {
     HStack(spacing: Theme.Space.sm) {
@@ -34,9 +35,12 @@ struct CommandChip: View {
   private func copy() {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(command, forType: .string)
+    copyCount += 1
+    let thisCopy = copyCount
     withAnimation(.easeOut(duration: 0.15)) { copied = true }
     Task {
       try? await Task.sleep(for: Theme.confirmationDuration)
+      guard thisCopy == copyCount else { return }
       withAnimation(.easeOut(duration: 0.3)) { copied = false }
     }
   }
