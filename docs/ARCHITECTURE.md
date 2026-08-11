@@ -62,6 +62,10 @@ Rules 1–3 each replaced an earlier version that looked correct and was not: a 
 
 - **Removing a shared group container** while sibling apps remain installed. Reported at `low` today; a real ownership model is future work.
 
+## Decision record — council review of the privileged helper, 2026-08-11
+
+Status: frozen 2026-08-11. Three rounds against the shipped 0.1.0 increment; both reviewers verified the last round closed and found no new P0. Every finding that survived was a real defect in code that had already passed a previous round — the helper's four rules above are the residue. Rule 2 also carries an end-to-end proof on a real machine, not just a reading of the source.
+
 ## Decision record — council review, 2026-08-10
 
 Status: frozen 2026-08-10 (both reviewers verified all findings closed, no new P0).
