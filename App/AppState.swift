@@ -46,6 +46,7 @@ final class AppState {
   /// Sidebar sentinels for the tool panes.
   static let devCachesSelectionID = "scrubjay.dev-caches"
   static let orphansSelectionID = "scrubjay.orphans"
+  static let startupSelectionID = "scrubjay.startup"
 
   let helper = HelperClient()
 
@@ -71,6 +72,10 @@ final class AppState {
   var scan: ScanResult?
   var devCaches: [SelectableCache]?
   var orphans: [SelectableItem]?
+  /// Login items and daemons left behind by apps that are gone; nil until
+  /// the helper has read the database.
+  var staleBackgroundItems: [StaleBackgroundItem]?
+  var backgroundItemsTotal = 0
   var isScanning = false
   var isRemoving = false
   var removalError: String?
@@ -165,11 +170,19 @@ final class AppState {
     }
     if selectedBundleID == Self.orphansSelectionID {
       devCaches = nil
+      staleBackgroundItems = nil
       await loadOrphans(generation: generation)
+      return
+    }
+    if selectedBundleID == Self.startupSelectionID {
+      devCaches = nil
+      orphans = nil
+      await loadBackgroundItems(generation: generation)
       return
     }
     devCaches = nil
     orphans = nil
+    staleBackgroundItems = nil
     guard let app = apps.first(where: { $0.bundleID == selectedBundleID }) else {
       return
     }
@@ -322,6 +335,27 @@ final class AppState {
     isScanning = false
     // Orphans are never preselected.
     orphans = found.map { SelectableItem(item: $0, isSelected: false) }
+  }
+
+  /// Read the background item database through the helper and keep the
+  /// entries whose app is gone.
+  func loadBackgroundItems(generation: Int? = nil) async {
+    let generation = generation ?? loadGeneration
+    isScanning = true
+    helper.refreshStatus()
+    guard helper.status == .enabled else {
+      isScanning = false
+      staleBackgroundItems = nil
+      backgroundItemsTotal = 0
+      return
+    }
+    let dump = await helper.readBackgroundItems()
+    let parsed = await Task.detached { dump.map(BackgroundItems.parse(dump:)) ?? [] }.value
+    let stale = await Task.detached { BackgroundItems.stale(in: parsed) }.value
+    guard generation == loadGeneration, selectedBundleID == Self.startupSelectionID else { return }
+    isScanning = false
+    backgroundItemsTotal = parsed.count
+    staleBackgroundItems = stale
   }
 
   /// Move selected orphaned leftovers to the Trash, then rescan.

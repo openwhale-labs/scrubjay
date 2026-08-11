@@ -55,44 +55,55 @@ final class HelperClient {
     refreshStatus()
   }
 
-  /// Move system-domain items into the user's Trash via the helper.
-  ///
-  /// - Returns: failed paths mapped to error descriptions.
-  func trashSystemItems(_ urls: [URL]) async -> [String: String] {
+  /// Read the background task management database through the helper.
+  func readBackgroundItems() async -> String? {
+    await withHelper { proxy, finish in
+      proxy.readBackgroundItems { finish($0) }
+    } onFailure: {
+      nil
+    }
+  }
+
+  /// Open a connection, hand the proxy to `body`, and resume exactly once —
+  /// the XPC error handler and the reply are mutually exclusive in normal
+  /// operation, but nothing in the API guarantees it.
+  private func withHelper<T: Sendable>(
+    _ body: @escaping (ScrubJayHelperProtocol, @escaping (T) -> Void) -> Void,
+    onFailure: @escaping () -> T
+  ) async -> T {
     let connection = NSXPCConnection(
       machServiceName: HelperConstants.machServiceName, options: .privileged)
     connection.remoteObjectInterface = NSXPCInterface(with: ScrubJayHelperProtocol.self)
-    // Authenticate the helper too: talk only to a daemon signed by us, so a
-    // planted service cannot impersonate it.
     connection.setCodeSigningRequirement(
       "anchor apple generic and identifier \"\(HelperConstants.machServiceName)\" "
         + "and certificate leaf[subject.OU] = \"67ULUSQ947\"")
     connection.resume()
     defer { connection.invalidate() }
 
-    // The XPC error handler and the reply are mutually exclusive in normal
-    // operation, but nothing in the API guarantees it — resume exactly once.
     let once = Once()
     return await withCheckedContinuation { continuation in
       guard
-        let proxy = connection.remoteObjectProxyWithErrorHandler({ error in
-          once.run {
-            continuation.resume(
-              returning: Dictionary(
-                uniqueKeysWithValues: urls.map { ($0.path, error.localizedDescription) }))
-          }
+        let proxy = connection.remoteObjectProxyWithErrorHandler({ _ in
+          once.run { continuation.resume(returning: onFailure()) }
         }) as? ScrubJayHelperProtocol
       else {
-        once.run {
-          continuation.resume(
-            returning: Dictionary(
-              uniqueKeysWithValues: urls.map { ($0.path, "helper connection failed") }))
-        }
+        once.run { continuation.resume(returning: onFailure()) }
         return
       }
-      proxy.trashSystemItems(paths: urls.map(\.path)) { failures in
-        once.run { continuation.resume(returning: failures) }
+      body(proxy) { value in
+        once.run { continuation.resume(returning: value) }
       }
+    }
+  }
+
+  /// Move system-domain items into the user's Trash via the helper.
+  ///
+  /// - Returns: failed paths mapped to error descriptions.
+  func trashSystemItems(_ urls: [URL]) async -> [String: String] {
+    await withHelper { proxy, finish in
+      proxy.trashSystemItems(paths: urls.map(\.path)) { finish($0) }
+    } onFailure: {
+      Dictionary(uniqueKeysWithValues: urls.map { ($0.path, "helper connection failed") })
     }
   }
 }

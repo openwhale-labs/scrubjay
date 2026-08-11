@@ -26,6 +26,27 @@ final class HelperService: NSObject, ScrubJayHelperProtocol {
     reply(HelperConstants.version)
   }
 
+  /// Read-only: one fixed command, no caller-supplied arguments, no writes.
+  func readBackgroundItems(reply: @escaping (String?) -> Void) {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/sfltool")
+    process.arguments = ["dumpbtm"]
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
+    do {
+      try process.run()
+    } catch {
+      reply(nil)
+      scheduleExit()
+      return
+    }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    reply(process.terminationStatus == 0 ? String(data: data, encoding: .utf8) : nil)
+    scheduleExit()
+  }
+
   func trashSystemItems(
     paths: [String], reply: @escaping ([String: String]) -> Void
   ) {

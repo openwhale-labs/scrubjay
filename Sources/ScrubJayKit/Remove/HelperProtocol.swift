@@ -16,6 +16,12 @@ import Foundation
   /// - Returns via reply: failed paths mapped to error descriptions; empty
   ///   dictionary means every item landed in the Trash.
   func trashSystemItems(paths: [String], reply: @escaping ([String: String]) -> Void)
+
+  /// Read the background task management database, which only root may open.
+  ///
+  /// Strictly read-only: the helper runs one fixed command with no arguments
+  /// from the caller and returns its text.
+  func readBackgroundItems(reply: @escaping (String?) -> Void)
 }
 
 public enum HelperConstants {

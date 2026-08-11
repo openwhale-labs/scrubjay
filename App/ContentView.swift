@@ -14,6 +14,8 @@ struct ContentView: View {
             .tag(AppState.devCachesSelectionID)
           Label("Orphaned leftovers", systemImage: "questionmark.folder")
             .tag(AppState.orphansSelectionID)
+          Label("Startup items", systemImage: "power")
+            .tag(AppState.startupSelectionID)
         }
         Section {
           ForEach(Array(state.filteredApps.enumerated()), id: \.element.id) { index, app in
@@ -72,6 +74,8 @@ struct ContentView: View {
         DevCachesView()
       } else if state.selectedBundleID == AppState.orphansSelectionID {
         OrphansView()
+      } else if state.selectedBundleID == AppState.startupSelectionID {
+        StartupItemsView()
       } else if state.isScanning {
         ProgressView("Scanning…")
       } else if state.scan != nil {

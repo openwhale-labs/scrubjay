@@ -7,7 +7,7 @@ struct ScrubJay: ParsableCommand {
   static let configuration = CommandConfiguration(
     commandName: "scrubjay",
     abstract: "Uninstall Mac apps and the files they leave behind.",
-    subcommands: [Apps.self, Scan.self, Remove.self, Dev.self, Orphans.self],
+    subcommands: [Apps.self, Scan.self, Remove.self, Dev.self, Orphans.self, Startup.self],
     defaultSubcommand: Apps.self
   )
 }
