@@ -29,6 +29,28 @@ public enum Trasher {
     return protected.contains(path)
   }
 
+  /// True when macOS refused the move for lack of permission. For an app
+  /// bundle this is the App Management privacy setting (System Settings ›
+  /// Privacy & Security › App Management, macOS 13+): the system posts only
+  /// a notification, never a dialog, and offers no API to request the
+  /// permission — so callers must recognise the error and point the user at
+  /// the setting themselves.
+  public static func isPermissionDenied(_ error: Error) -> Bool {
+    var next: NSError? = error as NSError
+    while let current = next {
+      if current.domain == NSCocoaErrorDomain,
+        current.code == CocoaError.fileWriteNoPermission.rawValue {
+        return true
+      }
+      if current.domain == NSPOSIXErrorDomain,
+        current.code == Int(EPERM) || current.code == Int(EACCES) {
+        return true
+      }
+      next = current.userInfo[NSUnderlyingErrorKey] as? NSError
+    }
+    return false
+  }
+
   /// Move a file or directory to the Trash.
   ///
   /// - Returns: the item's new location inside the Trash, when provided by

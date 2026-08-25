@@ -103,6 +103,18 @@ struct ContentView: View {
     } message: {
       Text(state.removalError ?? "")
     }
+    .alert(
+      "ScrubJay needs permission to remove apps",
+      isPresented: $state.needsAppManagement
+    ) {
+      Button("Open System Settings") { state.openAppManagementSettings() }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text(
+        "macOS allows moving other apps to the Trash only after ScrubJay is "
+          + "enabled under Privacy & Security › App Management. Turn it on, "
+          + "then quit and reopen ScrubJay and try again.")
+    }
     .dropDestination(for: URL.self) { urls, _ in
       guard let url = urls.first(where: { $0.pathExtension == "app" }) else { return false }
       return state.selectApp(at: url)

@@ -122,6 +122,13 @@ struct Remove: ParsableCommand {
       } catch {
         failures += 1
         print("  FAILED   \(app.bundleURL.path): \(error.localizedDescription)")
+        // Moving another app's bundle needs the App Management privacy
+        // permission, held by the terminal the CLI runs in.
+        if Trasher.isPermissionDenied(error) {
+          print(
+            "  Grant your terminal app this permission in System Settings › "
+              + "Privacy & Security › App Management, then run the command again.")
+        }
       }
     }
     if failures > 0 {

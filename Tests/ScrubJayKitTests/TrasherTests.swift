@@ -26,4 +26,21 @@ struct TrasherTests {
       try Trasher.trash(home)
     }
   }
+
+  @Test func recognisesPermissionErrors() {
+    let posix = NSError(domain: NSPOSIXErrorDomain, code: Int(EPERM))
+    // The shape trashItem actually throws: a Cocoa write-permission error
+    // wrapping the POSIX refusal.
+    let wrapped = NSError(
+      domain: NSCocoaErrorDomain,
+      code: CocoaError.fileWriteNoPermission.rawValue,
+      userInfo: [NSUnderlyingErrorKey: posix])
+    #expect(Trasher.isPermissionDenied(wrapped))
+    #expect(Trasher.isPermissionDenied(posix))
+    #expect(
+      Trasher.isPermissionDenied(NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))))
+    #expect(
+      !Trasher.isPermissionDenied(
+        NSError(domain: NSCocoaErrorDomain, code: CocoaError.fileNoSuchFile.rawValue)))
+  }
 }

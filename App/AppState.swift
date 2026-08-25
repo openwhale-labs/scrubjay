@@ -79,6 +79,9 @@ final class AppState {
   var isScanning = false
   var isRemoving = false
   var removalError: String?
+  /// Set when trashing an app bundle failed on the App Management privacy
+  /// setting; drives the alert that links to System Settings.
+  var needsAppManagement = false
   /// Shown on the placeholder after a completed uninstall.
   var lastRemovalNote: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
@@ -292,28 +295,7 @@ final class AppState {
       }
     }
     if current.appBundleSelected {
-      do {
-        try Trasher.trash(current.app.bundleURL)
-        current.appBundleSelected = false
-        current.appBundleSize = nil
-        bundleRemoved = true
-      } catch {
-        // Root-owned bundles (Tunnelblick installs itself owned by root)
-        // defeat a user-level trash; the helper can still move them.
-        if helper.status == .enabled {
-          let helperFailures = await helper.trashSystemItems([current.app.bundleURL])
-          if let message = helperFailures[current.app.bundleURL.path] {
-            failures.append("\(current.app.bundleURL.lastPathComponent): \(message)")
-          } else {
-            current.appBundleSelected = false
-            current.appBundleSize = nil
-            bundleRemoved = true
-          }
-        } else {
-          failures.append(
-            "\(current.app.bundleURL.lastPathComponent): \(error.localizedDescription)")
-        }
-      }
+      bundleRemoved = await removeBundle(of: &current, failures: &failures)
       if bundleRemoved {
         await loadApps()
       }
@@ -337,6 +319,50 @@ final class AppState {
     // The user may have moved on while removal ran.
     guard generation == loadGeneration, current.app.bundleID == selectedBundleID else { return }
     scan = current
+  }
+
+  /// Trash the app bundle itself. Returns true once the bundle is gone.
+  private func removeBundle(of current: inout ScanResult, failures: inout [String]) async -> Bool {
+    do {
+      try Trasher.trash(current.app.bundleURL)
+      current.appBundleSelected = false
+      current.appBundleSize = nil
+      return true
+    } catch {
+      // Root-owned bundles (Tunnelblick installs itself owned by root)
+      // defeat a user-level trash; the helper can still move them.
+      var helperMessage: String?
+      if helper.status == .enabled {
+        let helperFailures = await helper.trashSystemItems([current.app.bundleURL])
+        if let message = helperFailures[current.app.bundleURL.path] {
+          helperMessage = message
+        } else {
+          current.appBundleSelected = false
+          current.appBundleSize = nil
+          return true
+        }
+      }
+      // A permission refusal on a bundle is the App Management privacy
+      // setting — a raw error text would leave the user with no way
+      // forward, so it gets its own alert with a settings link instead.
+      if Trasher.isPermissionDenied(error) {
+        needsAppManagement = true
+      } else {
+        let reason = helperMessage ?? error.localizedDescription
+        failures.append("\(current.app.bundleURL.lastPathComponent): \(reason)")
+      }
+      return false
+    }
+  }
+
+  /// Open System Settings on Privacy & Security › App Management. There is
+  /// no SMAppService-style API for this pane, only the URL scheme.
+  func openAppManagementSettings() {
+    guard
+      let url = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AppBundles")
+    else { return }
+    NSWorkspace.shared.open(url)
   }
 
   func loadOrphans(generation: Int? = nil) async {
