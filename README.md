@@ -1,6 +1,6 @@
 # ScrubJay
 
-Uninstall Mac apps cleanly.
+Uninstall Mac apps cleanly. ([中文说明](README.zh-CN.md))
 
 ScrubJay removes an application together with the files it leaves behind — caches, preferences, containers, saved state, logs, launch agents. Every removal goes to the Trash, so nothing is lost for good.
 
@@ -24,6 +24,20 @@ swift run scrubjay scan "Google Chrome"
 swift run scrubjay remove "Some App"
 swift run scrubjay dev
 swift run scrubjay orphans
+```
+
+```
+$ scrubjay scan "Google Chrome"
+Google Chrome (com.google.Chrome) — /Applications/Google Chrome.app
+
+[certain]
+  ~/Library/Preferences/com.google.Chrome.plist  (4 KB)
+
+[medium]
+  ~/Library/Application Support/Google/Chrome  (7.56 GB)
+  ~/Library/Caches/Google/Chrome  (1.78 GB)
+
+3 items, 9.33 GB
 ```
 
 `scan` reports what would be removed and how confident ScrubJay is about each file; it never deletes anything. `remove` shows the same report, asks for confirmation, and moves the items to the Trash — loosely matched files are excluded unless you lower `--min-confidence` yourself. `dev` lists developer caches (npm, pnpm, DerivedData, Homebrew downloads, …) that are safe to clear because everything in them is re-fetched or rebuilt on demand; `dev clean` moves them to the Trash after confirmation. `orphans` finds bundle-identifier-keyed files that no installed app claims — traces of apps uninstalled without cleanup.
