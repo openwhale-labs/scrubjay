@@ -4,12 +4,15 @@
 One command: `python3 tools/release.py` from the repo root. Produces
 dist/ScrubJay-<version>.dmg, notarized and stapled.
 
-Requires: xcodegen, an installed "Developer ID Application" identity, and a
-notarytool keychain profile (default AC_PASSWORD — account-level, shared
-across apps).
+Requires: xcodegen, an installed "Developer ID Application" identity, an App
+Store Connect API key (ASC_KEY_ID / ASC_ISSUER_ID in the environment plus
+~/.secrets/AuthKey_<key id>.p8), and the Sparkle EdDSA private key at
+~/.secrets/sparkle_ed25519_key. Keys live in files, not the keychain, so the
+whole flow works over SSH.
 """
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -21,6 +24,8 @@ DERIVED = REPO / ".build" / "ReleaseDerived"
 APP = DERIVED / "Build" / "Products" / "Release" / "ScrubJay.app"
 DIST = REPO / "dist"
 IDENTITY = "Developer ID Application: ARRWAY LTD (67ULUSQ947)"
+SECRETS = Path.home() / ".secrets"
+SPARKLE_ED_KEY = SECRETS / "sparkle_ed25519_key"
 
 
 def run(*cmd: str, check: bool = True) -> str:
@@ -146,11 +151,23 @@ def make_dmg(ver: str, notarized: bool) -> Path:
     return dmg
 
 
-def notarize(dmg: Path, profile: str) -> None:
+def notary_auth() -> list[str]:
+    key_id = os.environ.get("ASC_KEY_ID")
+    issuer = os.environ.get("ASC_ISSUER_ID")
+    if not (key_id and issuer):
+        raise SystemExit("ASC_KEY_ID / ASC_ISSUER_ID not set (source ~/.secrets/.env)")
+    key = SECRETS / f"AuthKey_{key_id}.p8"
+    if not key.exists():
+        raise SystemExit(f"missing App Store Connect key: {key}")
+    return ["--key", str(key), "--key-id", key_id, "--issuer", issuer]
+
+
+def notarize(dmg: Path) -> None:
     print("==> Submitting for notarization (a few minutes)")
+    auth = notary_auth()
     output = run(
         "xcrun", "notarytool", "submit", str(dmg),
-        "--keychain-profile", profile, "--wait", "--timeout", "30m", check=False,
+        *auth, "--wait", "--timeout", "30m", check=False,
     )
     print(output)
     if "status: Accepted" not in output:
@@ -158,7 +175,7 @@ def notarize(dmg: Path, profile: str) -> None:
         if match:
             sys.stderr.write(
                 run("xcrun", "notarytool", "log", match.group(1),
-                    "--keychain-profile", profile, check=False))
+                    *auth, check=False))
         raise SystemExit("notarization rejected")
     print("==> Stapling")
     run("xcrun", "stapler", "staple", str(dmg))
@@ -190,8 +207,11 @@ def make_appcast(dmg: Path) -> Path:
     )
     if not tool.exists():
         raise SystemExit(f"generate_appcast not found at {tool}")
+    if not SPARKLE_ED_KEY.exists():
+        raise SystemExit(f"missing Sparkle signing key: {SPARKLE_ED_KEY}")
     run(
         str(tool), str(dmg.parent),
+        "--ed-key-file", str(SPARKLE_ED_KEY),
         "--download-url-prefix", "https://dl.openwhale.dev/scrubjay/",
         "--link", "https://scrubjay.openwhale.dev",
     )
@@ -203,10 +223,11 @@ def make_appcast(dmg: Path) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--profile", default="AC_PASSWORD")
     parser.add_argument("--skip-notarize", action="store_true")
     args = parser.parse_args()
 
+    if not args.skip_notarize:
+        notary_auth()  # fail on missing credentials before the long build
     ver = version()
     build()
     resign_sparkle()
@@ -215,7 +236,7 @@ def main() -> int:
     if args.skip_notarize:
         print(f"==> Skipped notarization; test build at {dmg}")
         return 0
-    notarize(dmg, args.profile)
+    notarize(dmg)
     gatekeeper(dmg)
     appcast = make_appcast(dmg)
     print(f"\nDone: {dmg}")
