@@ -101,6 +101,9 @@ def main() -> int:
         dmgs = [d for d in dmgs if args.version in d.name]
     if not dmgs:
         raise SystemExit("no notarized DMG in dist/")
+    # Sparkle delta updates: the appcast advertises them, so they must be
+    # downloadable before it goes up.
+    dmgs += sorted(DIST.glob("ScrubJay*.delta"))
 
     appcast = DIST / "appcast.xml"
     if not appcast.exists():
