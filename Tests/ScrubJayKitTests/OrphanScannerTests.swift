@@ -236,7 +236,7 @@ struct OrphanScannerTests {
       at: home.appendingPathComponent("Library/Caches/com.fixture.updater"),
       withIntermediateDirectories: true)
 
-    let agentIdentities = AppInventory.launchAgentIdentities(in: agents)
+    let agentIdentities = AppInventory.launchAgentIdentities(in: [agents])
     #expect(agentIdentities.map(\.bundleID) == ["com.fixture.updater"])
 
     let items = scanner(home).scan(

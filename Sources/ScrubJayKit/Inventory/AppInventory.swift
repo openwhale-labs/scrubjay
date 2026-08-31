@@ -59,31 +59,40 @@ public enum AppInventory {
   }
 
   /// Identities of bundles that live software runs from outside any
-  /// Applications folder, reached through the user's launch agents —
-  /// Google's updater sits under Application Support and would otherwise
-  /// look ownerless. Only agents whose program actually exists count.
-  public static func launchAgentIdentities(in directory: URL? = nil) -> [AppIdentity] {
+  /// Applications folder, reached through launch agents and daemons —
+  /// Google's updater sits under the user's Application Support, Microsoft
+  /// AutoUpdate under /Library's, and both would otherwise look ownerless.
+  /// Only agents whose program actually exists count. Every .app along the
+  /// program's path owns files (the innermost is the running component,
+  /// outer ones its container), as do bundles shipped next to it.
+  public static func launchAgentIdentities(in directories: [URL]? = nil) -> [AppIdentity] {
     let fm = FileManager.default
-    let dir =
-      directory
-      ?? fm.homeDirectoryForCurrentUser.appendingPathComponent(
-        "Library/LaunchAgents", isDirectory: true)
-    let entries = (try? fm.contentsOfDirectory(
-      at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+    let dirs = directories ?? [
+      fm.homeDirectoryForCurrentUser.appendingPathComponent(
+        "Library/LaunchAgents", isDirectory: true),
+      URL(fileURLWithPath: "/Library/LaunchAgents", isDirectory: true),
+      URL(fileURLWithPath: "/Library/LaunchDaemons", isDirectory: true),
+    ]
     var identities: [AppIdentity] = []
-    for entry in entries where entry.pathExtension == "plist" {
-      guard let program = LaunchAgents.program(forPlistAt: entry),
-        fm.fileExists(atPath: program)
-      else { continue }
-      var url = URL(fileURLWithPath: program)
-      while url.path != "/" {
-        if url.pathExtension == "app" {
-          if let app = readBundle(at: url) {
+    for dir in dirs {
+      let entries = (try? fm.contentsOfDirectory(
+        at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+      for entry in entries where entry.pathExtension == "plist" {
+        guard let program = LaunchAgents.program(forPlistAt: entry),
+          fm.fileExists(atPath: program)
+        else { continue }
+        var url = URL(fileURLWithPath: program)
+        var outermost: InstalledApp?
+        while url.path != "/" {
+          if url.pathExtension == "app", let app = readBundle(at: url) {
             identities.append(app.identity)
+            outermost = app
           }
-          break
+          url.deleteLastPathComponent()
         }
-        url.deleteLastPathComponent()
+        if let outermost {
+          identities.append(contentsOf: embeddedIdentities(of: [outermost]))
+        }
       }
     }
     return identities
@@ -93,8 +102,9 @@ public enum AppInventory {
   /// live: Electron main bundles under MacOS, helpers under Frameworks,
   /// login items, XPC services, and extensions.
   static let embeddedBundleSubpaths = [
-    "Contents/MacOS", "Contents/Frameworks", "Contents/Library/LoginItems",
-    "Contents/XPCServices", "Contents/PlugIns", "Contents/Helpers",
+    "Contents", "Contents/MacOS", "Contents/Applications", "Contents/Frameworks",
+    "Contents/Library/LoginItems", "Contents/XPCServices", "Contents/PlugIns",
+    "Contents/Helpers", "Contents/SharedSupport",
   ]
   static let embeddedBundleExtensions: Set<String> = ["app", "xpc", "appex", "plugin"]
 
