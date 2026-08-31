@@ -128,7 +128,9 @@ struct Remove: ParsableCommand {
         // was blocked by the App Management privacy permission, held by
         // the terminal the CLI runs in.
         if Trasher.isPermissionDenied(error) {
-          if FileManager.default.isWritableFile(atPath: app.bundleURL.path) {
+          if FileManager.default.isWritableFile(atPath: app.bundleURL.path),
+            FileManager.default.isWritableFile(
+              atPath: app.bundleURL.deletingLastPathComponent().path) {
             print(
               "  Grant your terminal app this permission in System Settings › "
                 + "Privacy & Security › App Management, then run the command again.")

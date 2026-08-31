@@ -29,12 +29,12 @@ public enum Trasher {
     return protected.contains(path)
   }
 
-  /// True when macOS refused the move for lack of permission. For an app
-  /// bundle this is the App Management privacy setting (System Settings ›
-  /// Privacy & Security › App Management, macOS 13+): the system posts only
-  /// a notification, never a dialog, and offers no API to request the
-  /// permission — so callers must recognise the error and point the user at
-  /// the setting themselves.
+  /// True when macOS refused the move for lack of permission. The error
+  /// alone does not say which wall it was — POSIX ownership (a root-owned
+  /// bundle) and the App Management privacy setting (macOS 13+) both
+  /// surface this way, and the system shows no dialog and offers no API to
+  /// request the privacy permission — so callers must recognise the error
+  /// and work out the cause themselves.
   public static func isPermissionDenied(_ error: Error) -> Bool {
     var next: NSError? = error as NSError
     while let current = next {

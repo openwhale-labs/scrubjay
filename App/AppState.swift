@@ -354,7 +354,13 @@ final class AppState {
       if let helperMessage {
         failures.append("\(current.app.bundleURL.lastPathComponent): \(helperMessage)")
       } else if Trasher.isPermissionDenied(error) {
-        if FileManager.default.isWritableFile(atPath: current.app.bundleURL.path) {
+        // Heuristic: moving needs write access on the bundle and on the
+        // directory it leaves. If either is closed to this user it is an
+        // ownership wall for the helper; only a fully writable bundle that
+        // still gets refused points at the privacy setting.
+        let manager = FileManager.default
+        if manager.isWritableFile(atPath: current.app.bundleURL.path),
+          manager.isWritableFile(atPath: current.app.bundleURL.deletingLastPathComponent().path) {
           needsAppManagement = true
         } else {
           needsHelper = true
