@@ -82,6 +82,9 @@ final class AppState {
   /// Set when trashing an app bundle failed on the App Management privacy
   /// setting; drives the alert that links to System Settings.
   var needsAppManagement = false
+  /// Set when trashing a root-owned app bundle failed with the helper not
+  /// enabled; drives the alert that offers to enable the helper.
+  var needsHelper = false
   /// Shown on the placeholder after a completed uninstall.
   var lastRemovalNote: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
@@ -342,14 +345,23 @@ final class AppState {
           return true
         }
       }
-      // A permission refusal on a bundle is the App Management privacy
-      // setting — a raw error text would leave the user with no way
-      // forward, so it gets its own alert with a settings link instead.
-      if Trasher.isPermissionDenied(error) {
-        needsAppManagement = true
+      // Two distinct permission walls produce the same refusal. A bundle
+      // the user cannot write (root-owned: App Store installs, Tunnelblick)
+      // is a POSIX ownership problem no privacy toggle can lift — only the
+      // helper moves it. A writable bundle that still gets refused is the
+      // App Management privacy setting. Each gets its own alert; a raw
+      // error text would leave the user with no way forward.
+      if let helperMessage {
+        failures.append("\(current.app.bundleURL.lastPathComponent): \(helperMessage)")
+      } else if Trasher.isPermissionDenied(error) {
+        if FileManager.default.isWritableFile(atPath: current.app.bundleURL.path) {
+          needsAppManagement = true
+        } else {
+          needsHelper = true
+        }
       } else {
-        let reason = helperMessage ?? error.localizedDescription
-        failures.append("\(current.app.bundleURL.lastPathComponent): \(reason)")
+        failures.append(
+          "\(current.app.bundleURL.lastPathComponent): \(error.localizedDescription)")
       }
       return false
     }

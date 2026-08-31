@@ -115,6 +115,23 @@ struct ContentView: View {
           + "enabled under Privacy & Security › App Management. Turn it on, "
           + "then quit and reopen ScrubJay and try again.")
     }
+    .alert(
+      "This app needs the ScrubJay helper",
+      isPresented: $state.needsHelper
+    ) {
+      Button("Enable Helper") {
+        if let message = state.helper.register() {
+          state.removalError = message
+        }
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text(
+        "This app is installed with system ownership, so only the ScrubJay "
+          + "helper can move it to the Trash. Enable the helper — approve "
+          + "ScrubJay under System Settings › Login Items if asked — then "
+          + "try again.")
+    }
     .dropDestination(for: URL.self) { urls, _ in
       guard let url = urls.first(where: { $0.pathExtension == "app" }) else { return false }
       return state.selectApp(at: url)

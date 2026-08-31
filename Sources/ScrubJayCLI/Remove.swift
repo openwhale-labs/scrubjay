@@ -122,12 +122,21 @@ struct Remove: ParsableCommand {
       } catch {
         failures += 1
         print("  FAILED   \(app.bundleURL.path): \(error.localizedDescription)")
-        // Moving another app's bundle needs the App Management privacy
-        // permission, held by the terminal the CLI runs in.
+        // Two permission walls look identical here. A root-owned bundle
+        // (App Store installs) is out of reach for any user process — the
+        // ScrubJay app's privileged helper does that move. A writable one
+        // was blocked by the App Management privacy permission, held by
+        // the terminal the CLI runs in.
         if Trasher.isPermissionDenied(error) {
-          print(
-            "  Grant your terminal app this permission in System Settings › "
-              + "Privacy & Security › App Management, then run the command again.")
+          if FileManager.default.isWritableFile(atPath: app.bundleURL.path) {
+            print(
+              "  Grant your terminal app this permission in System Settings › "
+                + "Privacy & Security › App Management, then run the command again.")
+          } else {
+            print(
+              "  This app is installed with system ownership. Remove it with "
+                + "the ScrubJay app, whose helper can move it to the Trash.")
+          }
         }
       }
     }
