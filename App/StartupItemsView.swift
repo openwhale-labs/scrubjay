@@ -104,23 +104,17 @@ struct StartupItemsView: View {
   }
 
   private func footer(_ stale: [StaleBackgroundItem]) -> some View {
-    VStack(alignment: .leading, spacing: Theme.Space.md) {
-      HStack(alignment: .top, spacing: Theme.Space.md) {
-        Image(systemName: "info.circle").foregroundStyle(Theme.Palette.secondaryText)
-        Text(
-          "\(stale.count) of \(state.backgroundItemsTotal) items. These "
-            + "entries outlive the app and even an emptied Trash, and macOS "
-            + "offers no way to remove them one at a time.")
-        .font(.caption)
-        .foregroundStyle(Theme.Palette.secondaryText)
-      }
-      HStack(spacing: Theme.Space.sm) {
-        Text("Reset every startup item at once, then re-approve the apps you keep:")
-          .font(.caption)
-          .foregroundStyle(Theme.Palette.secondaryText)
-        CommandChip(command: "sudo sfltool resetbtm")
-      }
-      .padding(.leading, Theme.IconSize.row)
+    HStack(alignment: .top, spacing: Theme.Space.md) {
+      Image(systemName: "info.circle").foregroundStyle(Theme.Palette.secondaryText)
+      Text(
+        "\(stale.count) of \(state.backgroundItemsTotal) items. These "
+          + "entries are harmless — nothing behind them can launch. macOS "
+          + "offers no way to remove one on its own; they only disappear "
+          + "with a full startup-item reset, which would make you "
+          + "re-approve every app on this list. Not worth it for a "
+          + "cosmetic leftover.")
+      .font(.caption)
+      .foregroundStyle(Theme.Palette.secondaryText)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding()
