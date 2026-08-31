@@ -33,7 +33,11 @@ struct StartupItemsView: View {
       ContentUnavailableView {
         Label("Reading this list needs the ScrubJay helper", systemImage: "shield")
       } description: {
-        Text("The list of startup items is readable only with elevated access.")
+        Text(
+          "The list of startup items is readable only with elevated access. "
+            + "Enabling opens System Settings › Login Items: turn on ScrubJay "
+            + "under “Allow in the Background”. That switch approves the "
+            + "helper — it does not launch ScrubJay at login.")
       } actions: {
         Button("Enable…") {
           if let message = state.helper.register() {

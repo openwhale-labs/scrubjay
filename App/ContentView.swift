@@ -128,9 +128,10 @@ struct ContentView: View {
     } message: {
       Text(
         "This app is installed with system ownership, so only the ScrubJay "
-          + "helper can move it to the Trash. Enable the helper — approve "
-          + "ScrubJay under System Settings › Login Items if asked — then "
-          + "try again.")
+          + "helper can move it to the Trash. Enable the helper, then turn "
+          + "on ScrubJay under System Settings › Login Items › “Allow in "
+          + "the Background” — that switch approves the helper, it does not "
+          + "launch ScrubJay at login. Then try again.")
     }
     .dropDestination(for: URL.self) { urls, _ in
       guard let url = urls.first(where: { $0.pathExtension == "app" }) else { return false }
