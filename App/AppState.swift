@@ -404,7 +404,7 @@ final class AppState {
       return
     }
     let dump = await helper.readBackgroundItems()
-    let parsed = await Task.detached { dump.map(BackgroundItems.parse(dump:)) ?? [] }.value
+    let parsed = await Task.detached { dump.map { BackgroundItems.parse(dump: $0) } ?? [] }.value
     let stale = await Task.detached { BackgroundItems.stale(in: parsed) }.value
     guard generation == loadGeneration, selectedBundleID == Self.startupSelectionID else { return }
     isScanning = false

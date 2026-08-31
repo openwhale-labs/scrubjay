@@ -79,14 +79,29 @@ public enum BackgroundItems {
   /// Entries store either an absolute `file://` URL or a path relative to
   /// their parent app's bundle, so parents are resolved first and children
   /// joined onto them.
-  public static func parse(dump: String) -> [BackgroundItem] {
+  ///
+  /// The dump covers every account on the machine, in per-user sections.
+  /// Only the caller's own section and the system ones (UID 0 and -2, whose
+  /// /Library paths anyone can read) are kept: another user's home is not
+  /// readable from here, so their items cannot be told apart from missing
+  /// ones — and they are not this user's to clean up anyway.
+  public static func parse(dump: String, uid: Int = Int(getuid())) -> [BackgroundItem] {
+    let keptUIDs: Set<Int> = [uid, 0, -2]
     var records: [[String: String]] = []
     var current: [String: String] = [:]
+    var sectionKept = true
 
     for line in dump.split(separator: "\n", omittingEmptySubsequences: false) {
       let trimmed = line.trimmingCharacters(in: .whitespaces)
+      if trimmed.hasPrefix("Records for UID ") {
+        if !current.isEmpty, sectionKept { records.append(current) }
+        current = [:]
+        let fields = trimmed.split(separator: " ")
+        sectionKept = fields.count > 3 && Int(fields[3]).map(keptUIDs.contains) == true
+        continue
+      }
       if trimmed.hasPrefix("UUID:") {
-        if !current.isEmpty { records.append(current) }
+        if !current.isEmpty, sectionKept { records.append(current) }
         current = [:]
       }
       guard let colon = trimmed.firstIndex(of: ":") else { continue }
@@ -96,7 +111,7 @@ public enum BackgroundItems {
       if value == "(null)" { value = "" }
       if !key.isEmpty { current[key] = value }
     }
-    if !current.isEmpty { records.append(current) }
+    if !current.isEmpty, sectionKept { records.append(current) }
 
     // Absolute URLs first, so relative children can be joined onto them.
     var absolute: [String: URL] = [:]

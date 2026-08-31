@@ -129,4 +129,43 @@ struct BackgroundItemsTests {
     let present = stale.first { $0.item.name == "Present" }
     #expect(present?.reason == .appMissing)
   }
+
+  @Test func keepsOnlyTheCallersAndTheSystemSections() throws {
+    // The real dump covers every account on the machine. Another user's
+    // home is unreadable from this process, so items there would all read
+    // as missing; only the caller's section and the system ones survive.
+    let (text, home, _) = try fixture()
+    defer { try? FileManager.default.removeItem(at: home) }
+
+    let sectioned = """
+       Records for UID -2 : FFFFEEEE-DDDD-CCCC-BBBB-AAAAFFFFFFFE
+
+       #1:
+                       UUID: 55555555-5555-5555-5555-555555555555
+                       Name: System Daemon
+                       Type: legacy daemon (0x10010)
+                Disposition: [enabled, allowed, notified] (0xb)
+                 Identifier: 8.com.system.daemon
+                        URL: file:///nowhere/com.system.daemon.plist
+
+       Records for UID 501 : D1C6C408-C2D2-4203-BF6D-C9EC083BD9E6
+
+      \(text)
+
+       Records for UID 502 : 628CC7B3-10F8-45A3-BD06-FF641C25DC13
+
+       #1:
+                       UUID: 66666666-6666-6666-6666-666666666666
+                       Name: Other Users App
+                       Type: app (0x2)
+                Disposition: [enabled, allowed, notified] (0xb)
+                 Identifier: 2.com.other.app
+                        URL: file:///Users/someoneelse/Applications/Other.app/
+      """
+
+    let items = BackgroundItems.parse(dump: sectioned, uid: 501)
+    #expect(items.map(\.name).contains("System Daemon"))
+    #expect(items.map(\.name).contains("Present"))
+    #expect(!items.map(\.name).contains("Other Users App"))
+  }
 }
