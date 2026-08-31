@@ -310,8 +310,12 @@ final class AppState {
     // app is gone from the sidebar.
     if bundleRemoved {
       let count = max(plannedCount - failures.count, 0)
-      lastRemovalNote =
+      var note =
         "\(current.app.name) moved to the Trash — \(count) items, \(FileSize.format(plannedSize))."
+      if let startup = await startupLeftoverNote(bundleID: current.app.bundleID) {
+        note += " " + startup
+      }
+      lastRemovalNote = note
       if generation == loadGeneration, current.app.bundleID == selectedBundleID {
         selectedBundleID = nil
         scan = nil
@@ -322,6 +326,28 @@ final class AppState {
     // The user may have moved on while removal ran.
     guard generation == loadGeneration, current.app.bundleID == selectedBundleID else { return }
     scan = current
+  }
+
+  /// The uninstalled app's registrations in macOS's startup-item database.
+  /// The entries have no removal API and linger in System Settings; any
+  /// still-running job is stopped, and the note says where the switch is.
+  private func startupLeftoverNote(bundleID: String) async -> String? {
+    guard helper.status == .enabled, let dump = await helper.readBackgroundItems() else {
+      return nil
+    }
+    let id = bundleID.lowercased()
+    func label(_ identifier: String?) -> String {
+      identifier.flatMap { $0.split(separator: ".", maxSplits: 1).last.map(String.init) } ?? ""
+    }
+    let matches = BackgroundItems.parse(dump: dump).filter {
+      let own = label($0.identifier)
+      return own == id || own.hasPrefix(id + ".") || label($0.parentIdentifier) == id
+    }
+    guard !matches.isEmpty else { return nil }
+    for match in matches {
+      LaunchAgents.unload(label: label(match.identifier))
+    }
+    return "Its startup-item entry stays in System Settings — the switch is under Login Items."
   }
 
   /// Trash the app bundle itself. Returns true once the bundle is gone.
