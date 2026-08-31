@@ -99,4 +99,38 @@ struct OrphanScannerTests {
     #expect(Matcher.bundleIDStem(of: "com.foo") == nil)
     #expect(Matcher.bundleIDStem(of: "Adobe") == nil)
   }
+
+  @Test func unwrapsTeamIDAndGroupLabels() {
+    #expect(Matcher.unwrapContainerName("group.com.apple.notes") == "com.apple.notes")
+    #expect(
+      Matcher.unwrapContainerName("243lu875e5.groups.com.apple.podcasts") == "com.apple.podcasts")
+    #expect(
+      Matcher.unwrapContainerName("vh7g2mrf27.com.prect.navicatpremium.schedulegroup")
+        == "com.prect.navicatpremium.schedulegroup")
+    #expect(Matcher.unwrapContainerName("com.google.chrome") == "com.google.chrome")
+    #expect(
+      Matcher.unwrapContainerName("systemgroup.com.apple.icloud.searchpartyd")
+        == "com.apple.icloud.searchpartyd")
+  }
+
+  @Test func wrappedAppleEntriesAreNeverReported() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    for path in [
+      "Library/Caches/group.com.apple.notes",
+      "Library/Caches/243LU875E5.groups.com.apple.podcasts",
+    ] {
+      try FileManager.default.createDirectory(
+        at: home.appendingPathComponent(path), withIntermediateDirectories: true)
+    }
+
+    let items = scanner(home).scan(installed: [chrome], computeSizes: false)
+    #expect(!items.contains { $0.url.lastPathComponent.lowercased().contains("apple") })
+  }
+
+  @Test func applicationScriptsRootIsExcluded() {
+    let roots = OrphanScanner.forCurrentUser().roots
+    #expect(!roots.contains { $0.kind == .applicationScripts })
+    #expect(!roots.contains { $0.kind == .groupContainers })
+  }
 }

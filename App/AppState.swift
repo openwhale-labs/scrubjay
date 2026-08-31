@@ -386,10 +386,14 @@ final class AppState {
   func loadOrphans(generation: Int? = nil) async {
     let generation = generation ?? loadGeneration
     isScanning = true
-    let installed = apps.map(\.identity)
     let found = await Task.detached {
+      // The sidebar's app list drops Apple apps so they cannot be
+      // uninstalled; the claim set here must keep them, or their files
+      // read as ownerless. Empty entries are dropped: nothing to free,
+      // and a wall of Zero KB rows invites indiscriminate deletion.
       OrphanScanner.forCurrentUser()
-        .scan(installed: installed + AppInventory.auxiliaryIdentities())
+        .scan(installed: AppInventory.orphanClaimants())
+        .filter { ($0.sizeBytes ?? 1) > 0 }
     }.value
     guard generation == loadGeneration, selectedBundleID == Self.orphansSelectionID else { return }
     isScanning = false

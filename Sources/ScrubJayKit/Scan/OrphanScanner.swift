@@ -17,11 +17,13 @@ public struct OrphanScanner: Sendable {
   /// installed apps.
   static let frameworkServicePrefixes: [String] = ["org.sparkle-project."]
 
-  /// Group Containers are excluded: their team-ID-prefixed names cannot be
-  /// matched to bundle identifiers with confidence.
+  /// Group Containers and Application Scripts are excluded: both are named
+  /// with team-ID and `group.` wrappers that cannot be matched to bundle
+  /// identifiers with confidence, and their entries are mostly empty
+  /// scaffolding the system rebuilds anyway.
   public static func forCurrentUser() -> OrphanScanner {
     let roots = LeftoverCatalog.userRoots(home: FileManager.default.homeDirectoryForCurrentUser)
-      .filter { $0.kind != .groupContainers }
+      .filter { $0.kind != .groupContainers && $0.kind != .applicationScripts }
     return OrphanScanner(roots: roots)
   }
 
@@ -40,7 +42,12 @@ public struct OrphanScanner: Sendable {
       else { continue }
       for entry in entries {
         let name = entry.lastPathComponent
-        guard let stem = Matcher.bundleIDStem(of: name), !stem.hasPrefix("com.apple.") else {
+        guard let stem = Matcher.bundleIDStem(of: name) else { continue }
+        // Team-ID and `group.` wrappers hide the owning bundle ID; the
+        // Apple check must see through them or `group.com.apple.notes`
+        // reads as a third-party orphan.
+        let unwrapped = Matcher.unwrapContainerName(stem)
+        guard !stem.hasPrefix("com.apple."), !unwrapped.hasPrefix("com.apple.") else {
           continue
         }
         guard !installed.contains(where: { Matcher.match(entryName: name, identity: $0) != nil })
@@ -50,7 +57,7 @@ public struct OrphanScanner: Sendable {
         guard !installed.contains(where: { stem.contains($0.bundleID.lowercased()) })
         else { continue }
 
-        let vendorPrefix = stem.split(separator: ".").prefix(2).joined(separator: ".") + "."
+        let vendorPrefix = unwrapped.split(separator: ".").prefix(2).joined(separator: ".") + "."
         let vendorStillPresent = installed.contains {
           $0.bundleID.lowercased().hasPrefix(vendorPrefix)
         }

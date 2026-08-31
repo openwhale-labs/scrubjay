@@ -46,6 +46,16 @@ public enum AppInventory {
     return apps.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
   }
 
+  /// Identities that claim files in the orphan scan: every discoverable
+  /// app — including Apple and system apps, which are not uninstallable
+  /// but still own their files — plus auxiliary bundles. Uninstall lists
+  /// filter Apple apps out; the claim set must not.
+  public static func orphanClaimants() -> [AppIdentity] {
+    let system = URL(fileURLWithPath: "/System/Applications", isDirectory: true)
+    return discoverApps(in: defaultDirectories() + [system]).map(\.identity)
+      + auxiliaryIdentities()
+  }
+
   /// Places where live, app-like bundles exist outside the Applications
   /// folders: input methods, preference panes, screen savers, QuickLook and
   /// Spotlight plugins. Their files must never be mistaken for orphans.

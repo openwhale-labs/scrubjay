@@ -154,6 +154,24 @@ public enum Matcher {
     return String(parts[1]).lowercased()
   }
 
+  /// Strip container-name wrapping off a reverse-DNS stem: an optional
+  /// ten-character team-ID label, then an optional `group.`/`groups.` label
+  /// — `243lu875e5.groups.com.apple.podcasts` → `com.apple.podcasts`. App
+  /// Groups and Application Scripts directories carry these wrappers around
+  /// the bundle ID that actually identifies the owner.
+  public static func unwrapContainerName(_ stem: String) -> String {
+    var labels = stem.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
+    if labels.count > 2, let first = labels.first, first.count == 10,
+      first.allSatisfy({ $0.isLetter || $0.isNumber }) {
+      labels.removeFirst()
+    }
+    if labels.count > 2, let first = labels.first,
+      ["group", "groups", "systemgroup"].contains(first) {
+      labels.removeFirst()
+    }
+    return labels.joined(separator: ".")
+  }
+
   /// The reverse-DNS stem of a file name, or nil when the name does not look
   /// like a bundle identifier. `com.foo.Bar.plist` → `com.foo.bar`;
   /// `Google Chrome` → nil.
