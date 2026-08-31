@@ -40,11 +40,9 @@ struct OrphansView: View {
               .frame(width: Theme.Size.filterField)
           }
           Text(
-            """
-              Files keyed by bundle identifiers that no installed app claims — usually traces of \
-              uninstalled apps. Inspect with the magnifier; nothing is selected for you.
-            """
-          )
+            "Files keyed by bundle identifiers that no installed app claims "
+              + "— usually traces of uninstalled apps. Inspect with the "
+              + "magnifier; nothing is selected for you.")
           .font(.callout)
           .foregroundStyle(Theme.Palette.secondaryText)
         }

@@ -108,11 +108,9 @@ struct StartupItemsView: View {
       HStack(alignment: .top, spacing: Theme.Space.md) {
         Image(systemName: "info.circle").foregroundStyle(Theme.Palette.secondaryText)
         Text(
-          """
-            \(stale.count) of \(state.backgroundItemsTotal) items. These entries outlive the app and \
-            even an emptied Trash, and macOS offers no way to remove them one at a time.
-          """
-        )
+          "\(stale.count) of \(state.backgroundItemsTotal) items. These "
+            + "entries outlive the app and even an emptied Trash, and macOS "
+            + "offers no way to remove them one at a time.")
         .font(.caption)
         .foregroundStyle(Theme.Palette.secondaryText)
       }
