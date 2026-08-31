@@ -1,5 +1,6 @@
 import AppKit
 import ScrubJayKit
+import ServiceManagement
 import SwiftUI
 
 /// Login items and background daemons whose app is gone. macOS keeps these
@@ -104,17 +105,16 @@ struct StartupItemsView: View {
   }
 
   private func footer(_ stale: [StaleBackgroundItem]) -> some View {
-    HStack(alignment: .top, spacing: Theme.Space.md) {
+    HStack(alignment: .center, spacing: Theme.Space.md) {
       Image(systemName: "info.circle").foregroundStyle(Theme.Palette.secondaryText)
       Text(
-        "\(stale.count) of \(state.backgroundItemsTotal) items. These "
-          + "entries are harmless — nothing behind them can launch. macOS "
-          + "offers no way to remove one on its own; they only disappear "
-          + "with a full startup-item reset, which would make you "
-          + "re-approve every app on this list. Not worth it for a "
-          + "cosmetic leftover.")
+        "\(stale.count) of \(state.backgroundItemsTotal) items. Harmless — "
+          + "nothing behind them can launch, and macOS offers no way to "
+          + "remove the entries. Their switches are in System Settings.")
       .font(.caption)
       .foregroundStyle(Theme.Palette.secondaryText)
+      Spacer()
+      Button("Open System Settings") { SMAppService.openSystemSettingsLoginItems() }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding()
