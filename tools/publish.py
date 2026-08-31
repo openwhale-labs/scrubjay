@@ -110,7 +110,12 @@ def main() -> int:
         raise SystemExit("no appcast.xml in dist/ — run tools/release.py first")
 
     for dmg in dmgs:
-        put(dmg, "application/x-apple-diskimage")
+        content_type = (
+            "application/x-apple-diskimage"
+            if dmg.suffix == ".dmg"
+            else "application/octet-stream"
+        )
+        put(dmg, content_type)
     # The appcast goes last: it must never advertise a build that is not
     # downloadable yet.
     put(appcast, "application/xml")

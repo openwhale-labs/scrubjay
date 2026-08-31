@@ -227,7 +227,11 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.skip_notarize:
-        notary_auth()  # fail on missing credentials before the long build
+        # Fail on missing credentials before the long build: notarization
+        # needs the ASC key, the appcast needs the Sparkle key.
+        notary_auth()
+        if not SPARKLE_ED_KEY.exists():
+            raise SystemExit(f"missing Sparkle signing key: {SPARKLE_ED_KEY}")
     ver = version()
     build()
     resign_sparkle()
