@@ -17,6 +17,12 @@ public struct OrphanScanner: Sendable {
   /// installed apps.
   static let frameworkServicePrefixes: [String] = ["org.sparkle-project."]
 
+  /// True when the launch agent plist names a program that exists on disk.
+  static func launchAgentProgramExists(_ url: URL) -> Bool {
+    guard let program = LaunchAgents.program(forPlistAt: url) else { return false }
+    return FileManager.default.fileExists(atPath: program)
+  }
+
   /// Group Containers and Application Scripts are excluded: both are named
   /// with team-ID and `group.` wrappers that cannot be matched to bundle
   /// identifiers with confidence, and their entries are mostly empty
@@ -56,6 +62,13 @@ public struct OrphanScanner: Sendable {
         // installed app's bundle ID — that app still owns them.
         guard !installed.contains(where: { stem.contains($0.bundleID.lowercased()) })
         else { continue }
+        // A launch agent whose program still exists belongs to living
+        // software — updaters often install under Application Support
+        // rather than an Applications folder (Google's does), so the plist
+        // name alone cannot condemn the agent.
+        if root.kind == .launchAgents, Self.launchAgentProgramExists(entry) {
+          continue
+        }
 
         let vendorPrefix = unwrapped.split(separator: ".").prefix(2).joined(separator: ".") + "."
         let vendorStillPresent = installed.contains {

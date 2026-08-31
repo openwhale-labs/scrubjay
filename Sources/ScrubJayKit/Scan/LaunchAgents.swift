@@ -43,6 +43,19 @@ public enum LaunchAgents {
     launchctl(["print", "gui/\(getuid())/\(label)"])
   }
 
+  /// The absolute program path an agent plist runs, from `Program` or the
+  /// first `ProgramArguments` entry.
+  public static func program(forPlistAt url: URL) -> String? {
+    guard
+      let data = try? Data(contentsOf: url),
+      let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)
+        as? [String: Any]
+    else { return nil }
+    let program = plist["Program"] as? String ?? (plist["ProgramArguments"] as? [String])?.first
+    guard let program, program.hasPrefix("/") else { return nil }
+    return program
+  }
+
   /// Unload the agent from the user's launchd domain.
   ///
   /// - Returns: true when launchctl reported success.

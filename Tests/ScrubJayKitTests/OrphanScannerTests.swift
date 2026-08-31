@@ -133,4 +133,114 @@ struct OrphanScannerTests {
     #expect(!roots.contains { $0.kind == .applicationScripts })
     #expect(!roots.contains { $0.kind == .groupContainers })
   }
+
+  func writeBundle(at url: URL, bundleID: String) throws {
+    let contents = url.appendingPathComponent("Contents")
+    try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+    let plist = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
+      "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0"><dict>
+      <key>CFBundleIdentifier</key><string>\(bundleID)</string>
+      <key>CFBundleName</key><string>Fixture</string>
+      </dict></plist>
+      """
+    try plist.data(using: .utf8)!.write(to: contents.appendingPathComponent("Info.plist"))
+  }
+
+  @Test func embeddedBundlesClaimTheirFiles() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    // An Electron-style app: the outer bundle plus a separately identified
+    // main bundle under MacOS and a login item helper.
+    let outer = home.appendingPathComponent("Apps/Whale.app")
+    try writeBundle(at: outer, bundleID: "com.whale.whale")
+    try writeBundle(
+      at: outer.appendingPathComponent("Contents/MacOS/Whale Desktop.app"),
+      bundleID: "com.electron.whaledesktop")
+    try writeBundle(
+      at: outer.appendingPathComponent("Contents/Library/LoginItems/WhaleHelper.app"),
+      bundleID: "com.whale.helper")
+    for cacheDir in ["com.electron.whaledesktop", "com.whale.helper"] {
+      try FileManager.default.createDirectory(
+        at: home.appendingPathComponent("Library/Caches/\(cacheDir)"),
+        withIntermediateDirectories: true)
+    }
+
+    let apps = AppInventory.discoverApps(in: [home.appendingPathComponent("Apps")])
+    let embedded = AppInventory.embeddedIdentities(of: apps)
+    #expect(
+      Set(embedded.map(\.bundleID)) == ["com.electron.whaledesktop", "com.whale.helper"])
+
+    let items = scanner(home).scan(
+      installed: apps.map(\.identity) + embedded, computeSizes: false)
+    #expect(!items.contains { $0.url.lastPathComponent.hasPrefix("com.electron") })
+    #expect(!items.contains { $0.url.lastPathComponent == "com.whale.helper" })
+  }
+
+  @Test func liveLaunchAgentsAreNotOrphans() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    let program = home.appendingPathComponent("updater-binary")
+    try Data().write(to: program)
+    let agents = home.appendingPathComponent("Library/LaunchAgents")
+    try FileManager.default.createDirectory(at: agents, withIntermediateDirectories: true)
+    func agent(_ name: String, program: String) throws {
+      let plist = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
+        "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0"><dict>
+        <key>Label</key><string>\(name)</string>
+        <key>ProgramArguments</key><array><string>\(program)</string></array>
+        </dict></plist>
+        """
+      try plist.data(using: .utf8)!.write(to: agents.appendingPathComponent("\(name).plist"))
+    }
+    try agent("com.live.updater", program: program.path)
+    try agent("com.dead.updater", program: "/nowhere/updater-binary")
+
+    let names = Set(
+      scanner(home).scan(installed: [chrome], computeSizes: false)
+        .map(\.url.lastPathComponent))
+    #expect(!names.contains("com.live.updater.plist"))
+    #expect(names.contains("com.dead.updater.plist"))
+  }
+
+  @Test func liveAgentBundlesJoinTheClaimSet() throws {
+    let home = try makeFixtureHome()
+    defer { try? FileManager.default.removeItem(at: home) }
+    // An updater installed under Application Support, wired in through a
+    // launch agent — its caches must be claimed, not listed as orphans.
+    let updater = home.appendingPathComponent("Library/Application Support/Fixture/Updater.app")
+    try writeBundle(at: updater, bundleID: "com.fixture.updater")
+    let binary = updater.appendingPathComponent("Contents/MacOS/Updater")
+    try FileManager.default.createDirectory(
+      at: binary.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try Data().write(to: binary)
+    let agents = home.appendingPathComponent("Library/LaunchAgents")
+    try FileManager.default.createDirectory(at: agents, withIntermediateDirectories: true)
+    let plist = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \
+      "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0"><dict>
+      <key>Label</key><string>com.fixture.updater.wake</string>
+      <key>ProgramArguments</key><array><string>\(binary.path)</string></array>
+      </dict></plist>
+      """
+    try plist.data(using: .utf8)!.write(
+      to: agents.appendingPathComponent("com.fixture.updater.wake.plist"))
+    try FileManager.default.createDirectory(
+      at: home.appendingPathComponent("Library/Caches/com.fixture.updater"),
+      withIntermediateDirectories: true)
+
+    let agentIdentities = AppInventory.launchAgentIdentities(in: agents)
+    #expect(agentIdentities.map(\.bundleID) == ["com.fixture.updater"])
+
+    let items = scanner(home).scan(
+      installed: [chrome] + agentIdentities, computeSizes: false)
+    #expect(!items.contains { $0.url.lastPathComponent == "com.fixture.updater" })
+  }
 }

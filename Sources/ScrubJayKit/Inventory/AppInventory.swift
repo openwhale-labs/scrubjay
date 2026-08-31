@@ -48,12 +48,77 @@ public enum AppInventory {
 
   /// Identities that claim files in the orphan scan: every discoverable
   /// app — including Apple and system apps, which are not uninstallable
-  /// but still own their files — plus auxiliary bundles. Uninstall lists
-  /// filter Apple apps out; the claim set must not.
+  /// but still own their files — plus the bundles shipped inside them and
+  /// auxiliary bundles. Uninstall lists filter Apple apps out; the claim
+  /// set must not.
   public static func orphanClaimants() -> [AppIdentity] {
     let system = URL(fileURLWithPath: "/System/Applications", isDirectory: true)
-    return discoverApps(in: defaultDirectories() + [system]).map(\.identity)
-      + auxiliaryIdentities()
+    let apps = discoverApps(in: defaultDirectories() + [system])
+    return apps.map(\.identity) + embeddedIdentities(of: apps) + auxiliaryIdentities()
+      + launchAgentIdentities()
+  }
+
+  /// Identities of bundles that live software runs from outside any
+  /// Applications folder, reached through the user's launch agents —
+  /// Google's updater sits under Application Support and would otherwise
+  /// look ownerless. Only agents whose program actually exists count.
+  public static func launchAgentIdentities(in directory: URL? = nil) -> [AppIdentity] {
+    let fm = FileManager.default
+    let dir =
+      directory
+      ?? fm.homeDirectoryForCurrentUser.appendingPathComponent(
+        "Library/LaunchAgents", isDirectory: true)
+    let entries = (try? fm.contentsOfDirectory(
+      at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+    var identities: [AppIdentity] = []
+    for entry in entries where entry.pathExtension == "plist" {
+      guard let program = LaunchAgents.program(forPlistAt: entry),
+        fm.fileExists(atPath: program)
+      else { continue }
+      var url = URL(fileURLWithPath: program)
+      while url.path != "/" {
+        if url.pathExtension == "app" {
+          if let app = readBundle(at: url) {
+            identities.append(app.identity)
+          }
+          break
+        }
+        url.deleteLastPathComponent()
+      }
+    }
+    return identities
+  }
+
+  /// Locations inside an app bundle where separately identified components
+  /// live: Electron main bundles under MacOS, helpers under Frameworks,
+  /// login items, XPC services, and extensions.
+  static let embeddedBundleSubpaths = [
+    "Contents/MacOS", "Contents/Frameworks", "Contents/Library/LoginItems",
+    "Contents/XPCServices", "Contents/PlugIns", "Contents/Helpers",
+  ]
+  static let embeddedBundleExtensions: Set<String> = ["app", "xpc", "appex", "plugin"]
+
+  /// Bundle identifiers of components shipped inside installed apps.
+  /// macOS keys files — recent-document lists, caches — by these IDs, not
+  /// by the containing app's, so the orphan scan must know them
+  /// (com.electron.dockerdesktop belongs to an installed Docker, not to a
+  /// removed app).
+  public static func embeddedIdentities(of apps: [InstalledApp]) -> [AppIdentity] {
+    let fm = FileManager.default
+    var identities: [AppIdentity] = []
+    for app in apps {
+      for sub in embeddedBundleSubpaths {
+        let dir = app.bundleURL.appendingPathComponent(sub, isDirectory: true)
+        let entries = (try? fm.contentsOfDirectory(
+          at: dir, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        for entry in entries where embeddedBundleExtensions.contains(entry.pathExtension) {
+          if let nested = readBundle(at: entry) {
+            identities.append(nested.identity)
+          }
+        }
+      }
+    }
+    return identities
   }
 
   /// Places where live, app-like bundles exist outside the Applications
