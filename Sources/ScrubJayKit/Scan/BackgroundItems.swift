@@ -74,6 +74,14 @@ public enum BackgroundItems {
     return String(data: data, encoding: .utf8)
   }
 
+  /// The account whose sections matter. Under sudo the process runs as
+  /// root, but the startup items belong to the user who invoked it.
+  public static func callerUID(
+    environment: [String: String] = ProcessInfo.processInfo.environment
+  ) -> Int {
+    environment["SUDO_UID"].flatMap(Int.init) ?? Int(getuid())
+  }
+
   /// Parse `sfltool dumpbtm` output.
   ///
   /// Entries store either an absolute `file://` URL or a path relative to

@@ -168,4 +168,12 @@ struct BackgroundItemsTests {
     #expect(items.map(\.name).contains("Present"))
     #expect(!items.map(\.name).contains("Other Users App"))
   }
+
+  @Test func sudoResolvesToTheInvokingUser() {
+    // Under sudo the process is root; the sections that matter belong to
+    // the account that invoked it, carried in SUDO_UID.
+    #expect(BackgroundItems.callerUID(environment: ["SUDO_UID": "501"]) == 501)
+    #expect(BackgroundItems.callerUID(environment: [:]) == Int(getuid()))
+    #expect(BackgroundItems.callerUID(environment: ["SUDO_UID": "junk"]) == Int(getuid()))
+  }
 }

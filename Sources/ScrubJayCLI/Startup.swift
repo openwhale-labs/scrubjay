@@ -28,7 +28,7 @@ struct Startup: ParsableCommand {
       text = output
     }
 
-    let items = BackgroundItems.parse(dump: text)
+    let items = BackgroundItems.parse(dump: text, uid: BackgroundItems.callerUID())
     let stale = BackgroundItems.stale(in: items)
     print("\(items.count) background items registered.\n")
 
@@ -48,10 +48,11 @@ struct Startup: ParsableCommand {
     print(
       """
 
-      \(stale.count) items. These entries outlive the app and even an emptied \
-      Trash, and macOS offers no way to remove them one by one. To reset every \
-      login item on this Mac at once: sudo sfltool resetbtm (you will \
-      re-approve the apps you keep).
+      \(stale.count) items. These entries are harmless — nothing behind them \
+      can launch. macOS offers no way to remove one on its own; they only \
+      disappear with a full startup-item reset, which would make you \
+      re-approve every app's background items. Not worth it for a cosmetic \
+      leftover.
       """)
   }
 }
