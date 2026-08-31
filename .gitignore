@@ -7,3 +7,4 @@ xcuserdata/
 dist/
 build/
 .wrangler/
+__pycache__/
