@@ -389,11 +389,12 @@ final class AppState {
     let found = await Task.detached {
       // The sidebar's app list drops Apple apps so they cannot be
       // uninstalled; the claim set here must keep them, or their files
-      // read as ownerless. Empty entries are dropped: nothing to free,
-      // and a wall of Zero KB rows invites indiscriminate deletion.
+      // read as ownerless. Entries under 1 MB are dropped: freeing them
+      // is imperceptible, while a wall of tiny rows creates exactly the
+      // pick-through-hundreds anxiety this pane should remove.
       OrphanScanner.forCurrentUser()
         .scan(installed: AppInventory.orphanClaimants())
-        .filter { ($0.sizeBytes ?? 1) > 0 }
+        .filter { ($0.sizeBytes ?? .max) >= 1_000_000 }
     }.value
     guard generation == loadGeneration, selectedBundleID == Self.orphansSelectionID else { return }
     isScanning = false

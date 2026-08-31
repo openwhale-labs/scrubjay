@@ -41,9 +41,9 @@ struct OrphansView: View {
           }
           Text(
             "Files keyed by bundle identifiers that no installed app claims "
-              + "— usually traces of uninstalled apps. Empty entries are "
-              + "left out. Inspect with the magnifier; nothing is selected "
-              + "for you.")
+              + "— usually traces of uninstalled apps. Entries under 1 MB "
+              + "are left out. Inspect with the magnifier; nothing is "
+              + "selected for you.")
           .font(.callout)
           .foregroundStyle(Theme.Palette.secondaryText)
         }
