@@ -4,7 +4,7 @@
 
 把图标从「应用程序」拖进废纸篓,不等于卸载。应用用过一段时间后,缓存、偏好设置、容器、窗口状态、日志、launch agent 会留在用户库的各个角落。ScrubJay 把应用和这些残留一起找出来、一起移进废纸篓。只进废纸篓,不做永久删除,删错了随时捞回来。
 
-**ScrubJay 0.1 已发布**,公证过的 DMG 在 [scrubjay.openwhale.dev](https://scrubjay.openwhale.dev) 下载,也可以用 Homebrew:
+**ScrubJay 已发布**,公证过的 DMG 在 [scrubjay.openwhale.dev](https://scrubjay.openwhale.dev) 下载,也可以用 Homebrew:
 
 ```
 brew install --cask openwhale-labs/tap/scrubjay
