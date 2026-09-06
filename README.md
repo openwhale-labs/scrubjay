@@ -65,7 +65,4 @@ how to build the app and what a change should carry. Security issues go through
 
 ## License
 
-Source-available, not open source in the OSI sense: Apache 2.0 with the
-[Commons Clause](https://commonsclause.com/). Read it, change it, run it,
-redistribute it — selling ScrubJay, or a product whose value derives
-substantially from it, is not permitted. See [LICENSE](LICENSE).
+[Apache License 2.0](LICENSE).

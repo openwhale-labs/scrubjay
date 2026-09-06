@@ -68,4 +68,4 @@ CLI 直接 `swift run scrubjay`。引擎是一个无 UI 依赖的库(`ScrubJayKi
 
 ## 许可
 
-源码公开,但不是 OSI 意义上的开源:Apache 2.0 加 [Commons Clause](https://commonsclause.com/)。可以读、改、自用、再分发;不允许售卖 ScrubJay 或主要价值来自它的产品。详见 [LICENSE](LICENSE)。
+[Apache License 2.0](LICENSE)。
