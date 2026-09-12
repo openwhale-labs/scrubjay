@@ -70,8 +70,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.openwhale.scrubjay
-        MARKETING_VERSION: 0.1.6
-        CURRENT_PROJECT_VERSION: 7
+        MARKETING_VERSION: 0.1.7
+        CURRENT_PROJECT_VERSION: 8
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "Developer ID Application"
         DEVELOPMENT_TEAM: 67ULUSQ947
