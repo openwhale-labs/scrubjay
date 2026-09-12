@@ -23,14 +23,14 @@ struct DevList: ParsableCommand {
       return
     }
     let idWidth = caches.map(\.id.count).max() ?? 0
-    var total: Int64 = 0
     for cache in caches {
       let id = cache.id.padding(toLength: idWidth + 2, withPad: " ", startingAt: 0)
-      let size = cache.sizeBytes.map(FileSize.format) ?? "?"
-      print("\(id)\(size.padding(toLength: 10, withPad: " ", startingAt: 0))\(cache.location.url.path)")
-      total += cache.sizeBytes ?? 0
+      let size = cache.formattedSize
+      let paddedSize = size.padding(toLength: max(18, size.count + 2), withPad: " ", startingAt: 0)
+      print("\(id)\(paddedSize)\(cache.location.url.path)")
     }
-    print("\nTotal: \(FileSize.format(total)) — clear with `scrubjay dev clean <id ...>`")
+    let total = DevCacheStatus.formattedTotal(caches)
+    print("\nTotal: \(total) — clear with `scrubjay dev clean <id ...>`")
   }
 }
 
@@ -59,15 +59,14 @@ struct DevClean: ParsableCommand {
       selected.append(cache)
     }
 
-    let total = selected.compactMap(\.sizeBytes).reduce(0, +)
+    let total = DevCacheStatus.formattedTotal(selected)
     for cache in selected {
-      let size = cache.sizeBytes.map { " (\(FileSize.format($0)))" } ?? ""
-      print("  \(cache.location.url.path)\(size)")
+      print("  \(cache.location.url.path) (\(cache.formattedSize))")
     }
     print("")
     if !yes {
       print(
-        "Move \(selected.count) cache directories (\(FileSize.format(total))) to the Trash? [y/N] ",
+        "Move \(selected.count) cache directories (\(total)) to the Trash? [y/N] ",
         terminator: "")
       let answer = readLine()?.trimmingCharacters(in: .whitespaces).lowercased()
       guard answer == "y" || answer == "yes" else {
@@ -87,6 +86,6 @@ struct DevClean: ParsableCommand {
       }
     }
     if failures > 0 { throw ExitCode.failure }
-    print("\nDone. \(FileSize.format(total)) moved to the Trash.")
+    print("\nDone. \(total) moved to the Trash.")
   }
 }

@@ -18,6 +18,18 @@ public struct DevCacheStatus: Sendable, Hashable, Identifiable {
   public var id: String { location.id }
   public let location: DevCacheLocation
   public let sizeBytes: Int64?
+  public let isIncomplete: Bool
+
+  public var formattedSize: String {
+    Self.formattedTotal([self])
+  }
+
+  public static func formattedTotal(_ caches: [DevCacheStatus]) -> String {
+    let bytes = caches.compactMap(\.sizeBytes).reduce(0, +)
+    let incomplete = caches.contains { $0.isIncomplete || $0.sizeBytes == nil }
+    if incomplete && bytes == 0 { return "Size unavailable" }
+    return (incomplete ? "≥ " : "") + FileSize.format(bytes)
+  }
 }
 
 public enum DevCaches {
@@ -84,14 +96,18 @@ public enum DevCaches {
     ]
   }
 
-  /// Catalog entries that exist on this machine, with sizes when requested.
+  /// Existing cache locations, excluding confirmed zero-allocation results
+  /// when measuring. Unreadable locations remain visible as incomplete.
   public static func present(home: URL? = nil, computeSizes: Bool = true) -> [DevCacheStatus] {
     let home = home ?? FileManager.default.homeDirectoryForCurrentUser
     return catalog(home: home).compactMap { location in
       guard FileManager.default.fileExists(atPath: location.url.path) else { return nil }
+      var incomplete = false
+      let size = computeSizes
+        ? FileSize.allocatedSize(at: location.url) { _, _ in incomplete = true } : nil
+      if computeSizes && size == 0 && !incomplete { return nil }
       return DevCacheStatus(
-        location: location,
-        sizeBytes: computeSizes ? FileSize.allocatedSize(at: location.url) : nil)
+        location: location, sizeBytes: size, isIncomplete: incomplete)
     }
   }
 }

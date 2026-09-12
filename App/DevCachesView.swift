@@ -11,7 +11,7 @@ struct DevCachesView: View {
     @Bindable var state = state
     if let caches = state.devCaches {
       let selected = caches.filter(\.isSelected)
-      let selectedSize = selected.compactMap(\.status.sizeBytes).reduce(0, +)
+      let selectedSize = DevCacheStatus.formattedTotal(selected.map(\.status))
       VStack(spacing: 0) {
         VStack(alignment: .leading, spacing: Theme.Space.xs) {
           Text("Developer caches").font(.title2.bold())
@@ -38,9 +38,15 @@ struct DevCachesView: View {
             }
           }
         }
+        .overlay {
+          if caches.isEmpty {
+            Text("No developer caches to clear.")
+              .foregroundStyle(Theme.Palette.secondaryText)
+          }
+        }
         Divider()
         HStack {
-          Text("\(selected.count) selected · \(FileSize.format(selectedSize))")
+          Text(selected.isEmpty ? "0 selected" : "\(selected.count) selected · \(selectedSize)")
             .foregroundStyle(Theme.Palette.secondaryText)
           Spacer()
           Button("Move to Trash…") { confirming = true }
@@ -49,7 +55,7 @@ struct DevCachesView: View {
         }
         .padding()
         .confirmationDialog(
-          "Move \(selected.count) cache directories (\(FileSize.format(selectedSize))) to the Trash?",
+          "Move \(selected.count) cache directories (\(selectedSize)) to the Trash?",
           isPresented: $confirming, titleVisibility: .visible
         ) {
           Button("Move to Trash", role: .destructive) {
@@ -76,11 +82,10 @@ struct DevCachesView: View {
           .foregroundStyle(Theme.Palette.secondaryText)
       }
       Spacer()
-      if let size = status.sizeBytes {
-        Text(FileSize.format(size))
-          .foregroundStyle(Theme.Palette.secondaryText)
-          .monospacedDigit()
-      }
+      Text(status.formattedSize)
+        .foregroundStyle(Theme.Palette.secondaryText)
+        .monospacedDigit()
+        .help(status.isIncomplete ? "Some files could not be measured; this size is incomplete." : "")
       RevealButton(url: status.location.url)
     }
   }
