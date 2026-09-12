@@ -29,6 +29,12 @@ struct DetailView: View {
         if let version = scan.app.version {
           Text(version).foregroundStyle(Theme.Palette.secondaryText)
         }
+        Button("Rescan", systemImage: "arrow.clockwise") {
+          Task { await state.scanSelectedApp() }
+        }
+        .labelStyle(.iconOnly)
+        .help("Refresh the app and its associated files")
+        .disabled(state.isRemoving)
         Spacer()
         Picker("", selection: $sortBySize) {
           Text("Confidence").tag(false)
@@ -41,6 +47,14 @@ struct DetailView: View {
       Text(scan.app.bundleID)
         .font(.callout)
         .foregroundStyle(Theme.Palette.secondaryText)
+      if scan.footprint.isIncomplete {
+        Label(
+          "Some locations couldn’t be read. Sizes shown are a minimum.",
+          systemImage: "exclamationmark.triangle")
+          .font(.callout)
+          .foregroundStyle(Theme.Palette.caution)
+          .help(scan.unreadableURLs.map(\.path).joined(separator: "\n"))
+      }
       if state.runningBundleIDs.contains(scan.app.bundleID) {
           Label(
             "This app is running. Quit it before uninstalling.",
@@ -262,7 +276,7 @@ struct DetailView: View {
       )
       .toggleStyle(.checkbox)
       .help("Everything, including loosely matched items — review those before removing.")
-      Text("\(scan.selectedCount) items · \(FileSize.format(scan.selectedSize))")
+      Text("\(scan.selectedCount) selected · \(scan.selectedSizeDescription)")
         .foregroundStyle(Theme.Palette.secondaryText)
         .padding(.leading, Theme.Space.md)
       Spacer()
@@ -278,7 +292,7 @@ struct DetailView: View {
     }
     .padding()
     .confirmationDialog(
-      "Move \(scan.selectedCount) items (\(FileSize.format(scan.selectedSize))) to the Trash?",
+      "Move \(scan.selectedCount) items (\(scan.selectedSizeDescription)) to the Trash?",
       isPresented: $confirming, titleVisibility: .visible
     ) {
       Button("Move to Trash", role: .destructive) {

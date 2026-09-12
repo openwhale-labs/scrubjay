@@ -177,4 +177,44 @@ struct LeftoverScannerTests {
     let plist = items.first { $0.url.lastPathComponent == "com.google.Chrome.plist" }
     #expect((plist?.sizeBytes ?? 0) > 0)
   }
+
+  @Test func footprintReportsUnreadableRootsButNotAbsentRoots() throws {
+    let home = try makeFixtureHome()
+    let manager = FileManager.default
+    let denied = home.appendingPathComponent("Library/Containers")
+    try manager.createDirectory(at: denied, withIntermediateDirectories: true)
+    defer {
+      try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: denied.path)
+      try? manager.removeItem(at: home)
+    }
+    try manager.setAttributes([.posixPermissions: 0], ofItemAtPath: denied.path)
+    let bundle = home.appendingPathComponent("Example.app")
+    try Data(repeating: 42, count: 8192).write(to: bundle)
+    let app = InstalledApp(
+      bundleID: chrome.bundleID, name: chrome.name, bundleURL: bundle, version: nil)
+    let footprint = AppFootprint.scan(
+      app: app, amongInstalled: [chrome, chromeBeta],
+      scanner: LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home)))
+
+    #expect(!footprint.items.isEmpty)
+    #expect(footprint.totalSize > 0)
+    #expect(footprint.isIncomplete)
+    #expect(footprint.unreadableURLs.map(\.path) == [denied.path])
+  }
+
+  @Test func unreadableVendorDirectoryIsReported() throws {
+    let home = try makeFixtureHome()
+    let manager = FileManager.default
+    let denied = home.appendingPathComponent("Library/Application Support/Google")
+    defer {
+      try? manager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: denied.path)
+      try? manager.removeItem(at: home)
+    }
+    try manager.setAttributes([.posixPermissions: 0], ofItemAtPath: denied.path)
+    var failures: [URL] = []
+    let scanner = LeftoverScanner(roots: LeftoverCatalog.userRoots(home: home))
+    _ = scanner.scan(for: chrome, computeSizes: false) { failed, _ in failures.append(failed) }
+    let resolvedFailures = failures.map { $0.resolvingSymlinksInPath().path }
+    #expect(resolvedFailures == [denied.resolvingSymlinksInPath().path])
+  }
 }

@@ -21,6 +21,17 @@ struct ScanResult {
   var caskToken: String?
   /// True for apps whose data is irreplaceable history (chat archives).
   var holdsChatHistory: Bool
+  var unreadableURLs: [URL] = []
+
+  var footprint: AppFootprint {
+    AppFootprint(
+      bundleSize: appBundleSize, items: items.map(\.item), unreadableURLs: unreadableURLs)
+  }
+
+  var selectedSizeDescription: String {
+    let size = FileSize.format(selectedSize)
+    return footprint.isIncomplete ? "≥ \(size)" : size
+  }
 
   var selectedCount: Int {
     items.count(where: \.isSelected) + (appBundleSelected ? 1 : 0)
@@ -89,9 +100,9 @@ final class AppState {
   var lastRemovalNote: String?
   /// Bundle IDs of currently running apps, for the sidebar lock badge.
   var runningBundleIDs: Set<String> = []
-  /// Total footprint per app — bundle plus every matched leftover —
-  /// computed in the background after the list loads.
-  var appSizes: [String: Int64] = [:]
+  /// Both panes use the same full scan snapshot. New selections supersede
+  /// background work, even when that older work finishes later.
+  var footprints = AppFootprintCache()
   private var sizeSweepGeneration = 0
   /// Sidebar ordering: which key, and whether ascending. Clicking the active
   /// key in the UI flips the direction.
@@ -108,8 +119,8 @@ final class AppState {
     }
     if sidebarSortBySize {
       result.sort {
-        let lhs = appSizes[$0.bundleID] ?? -1
-        let rhs = appSizes[$1.bundleID] ?? -1
+        let lhs = footprints[$0.bundleID]?.totalSize ?? -1
+        let rhs = footprints[$1.bundleID]?.totalSize ?? -1
         return sidebarSortAscending ? lhs < rhs : lhs > rhs
       }
     } else if !sidebarSortAscending {
@@ -135,6 +146,10 @@ final class AppState {
     sizeSweepGeneration += 1
     let sweep = sizeSweepGeneration
     let snapshot = apps
+    footprints.reset()
+    let initialRequests = Dictionary(uniqueKeysWithValues: snapshot.map {
+      ($0.bundleID, footprints.beginScan(for: $0.bundleID))
+    })
     Task {
       // Bundle sizes first: one directory walk each, so the sidebar has
       // numbers within a second rather than after a full-disk sweep.
@@ -145,23 +160,29 @@ final class AppState {
           })
       }.value
       guard sweep == self.sizeSweepGeneration else { return }
-      self.appSizes = bundleSizes
+      for app in snapshot {
+        if let request = initialRequests[app.bundleID] {
+          footprints.publish(
+            AppFootprint(bundleSize: bundleSizes[app.bundleID], isBundleOnly: true), for: request)
+        }
+      }
 
       // Then refine to the real footprint, app by app at low priority. This
-      // scans every search root per app, so it must never block the list or
-      // outlive the selection that started it.
+      // scans every search root per app, so it must never block the list.
       let identities = snapshot.map(\.identity)
       for app in snapshot {
-        let total = await Task.detached(priority: .background) {
-          let bundle = FileSize.allocatedSize(at: app.bundleURL) ?? 0
-          let leftovers = LeftoverScanner.forCurrentUser()
-            .scan(for: app.identity, amongInstalled: identities)
-            .compactMap(\.sizeBytes)
-            .reduce(0, +)
-          return bundle + leftovers
+        guard sweep == self.sizeSweepGeneration else { return }
+        // A detail scan already started for this app: do not replace it
+        // with a separate scan or overwrite it with the bundle-only pass.
+        guard let initial = initialRequests[app.bundleID], footprints.isCurrent(initial) else {
+          continue
+        }
+        let request = footprints.beginScan(for: app.bundleID)
+        let footprint = await Task.detached(priority: .background) {
+          AppFootprint.scan(app: app, amongInstalled: identities)
         }.value
         guard sweep == self.sizeSweepGeneration else { return }
-        self.appSizes[app.bundleID] = total
+        footprints.publish(footprint, for: request)
       }
     }
   }
@@ -203,27 +224,31 @@ final class AppState {
     isScanning = true
 
     let others = apps.map(\.identity)
-    let (items, bundleSize, cask) = await Task.detached {
-      let scanner = LeftoverScanner.forCurrentUser()
-      let found = scanner.scan(for: app.identity, amongInstalled: others)
+    let request = footprints.beginScan(for: app.bundleID)
+    let (footprint, cask) = await Task.detached {
+      let footprint = AppFootprint.scan(app: app, amongInstalled: others)
       let cask = Homebrew.caskToken(
         forAppNamed: app.bundleURL.lastPathComponent, in: Homebrew.installedCasks())
-      return (found, FileSize.allocatedSize(at: app.bundleURL), cask)
+      return (footprint, cask)
     }.value
 
-    guard generation == loadGeneration else { return }
+    // The cache may still use a finished scan after the user moves on, but
+    // only the current selection may update the checklist.
+    let published = footprints.publish(footprint, for: request)
+    guard generation == loadGeneration, app.bundleID == selectedBundleID else { return }
     isScanning = false
+    guard published else { return }
     refreshRunningApps()
     helper.refreshStatus()
     let sensitive = SensitiveApps.holdsChatHistory(bundleID: app.bundleID)
     scan = ScanResult(
       app: app,
       appBundleSelected: true,
-      appBundleSize: bundleSize,
+      appBundleSize: footprint.bundleSize,
       // Preselection is confidence-driven: `low` is never preselected. For
       // chat apps, data directories also start unselected — losing a cache
       // costs a re-download, losing chat history costs the history.
-      items: items.map { item in
+      items: footprint.items.map { item in
         var selected = item.confidence >= .medium
         if sensitive && SensitiveApps.dataKinds.contains(item.kind) {
           selected = false
@@ -232,7 +257,8 @@ final class AppState {
       },
       isAppRunning: Self.isRunning(bundleID: app.bundleID),
       caskToken: cask,
-      holdsChatHistory: sensitive
+      holdsChatHistory: sensitive,
+      unreadableURLs: footprint.unreadableURLs
     )
   }
 
@@ -323,6 +349,10 @@ final class AppState {
       return
     }
 
+    // Reflect removed leftovers in the sidebar, even if the app remains or
+    // the user moved on. Invalidate any scan that began before removal.
+    let request = footprints.beginScan(for: current.app.bundleID)
+    footprints.publish(current.footprint, for: request)
     // The user may have moved on while removal ran.
     guard generation == loadGeneration, current.app.bundleID == selectedBundleID else { return }
     scan = current

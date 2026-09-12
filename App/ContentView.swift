@@ -41,12 +41,15 @@ struct ContentView: View {
                   .foregroundStyle(Theme.Palette.secondaryText)
               }
               Spacer()
-              if let size = state.appSizes[app.bundleID] {
-                Text(FileSize.format(size))
+              if let footprint = state.footprints[app.bundleID] {
+                Text(footprint.formattedSize)
                   .font(.caption)
                   .foregroundStyle(Theme.Palette.secondaryText)
                   .monospacedDigit()
-                  .help("App plus everything it left behind")
+                  .help(footprint.isBundleOnly
+                    ? "App bundle only; scanning associated files…"
+                    : "App and matched associated files. Select the app to refresh. "
+                      + "≥ means some locations could not be measured.")
               }
             }
             .tag(app.bundleID)

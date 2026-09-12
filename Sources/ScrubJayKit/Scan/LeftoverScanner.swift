@@ -34,29 +34,22 @@ public struct LeftoverScanner: Sendable {
   public func scan(
     for identity: AppIdentity,
     amongInstalled others: [AppIdentity] = [],
-    computeSizes: Bool = true
+    computeSizes: Bool = true,
+    onError: ((URL, Error) -> Void)? = nil
   ) -> [LeftoverItem] {
-    let fm = FileManager.default
     let rivals = others.filter { $0.bundleID.lowercased() != identity.bundleID.lowercased() }
     var items: [LeftoverItem] = []
 
     func append(_ url: URL, _ kind: LeftoverKind, _ confidence: Confidence) {
-      let size = computeSizes ? FileSize.allocatedSize(at: url) : nil
+      let size = computeSizes ? FileSize.allocatedSize(at: url, onError: onError) : nil
       let agent = kind == .launchAgents ? LaunchAgents.info(forPlistAt: url) : nil
       items.append(
         LeftoverItem(url: url, kind: kind, confidence: confidence, sizeBytes: size,
-          launchAgent: agent))
+                     launchAgent: agent))
     }
 
     for root in roots {
-      guard
-        let entries = try? fm.contentsOfDirectory(
-          at: root.url, includingPropertiesForKeys: [.isDirectoryKey],
-          options: [.skipsHiddenFiles])
-      else {
-        continue
-      }
-      for entry in entries {
+      for entry in entries(at: root.url, missingIsEmpty: true, onError: onError) {
         let name = entry.lastPathComponent
         // Group Containers use team-ID-prefixed names and can be shared
         // between a vendor's apps — dedicated matching, always `low`.
@@ -83,10 +76,8 @@ public struct LeftoverScanner: Sendable {
         if Self.vendorNestedKinds.contains(root.kind),
           let vendor = Matcher.vendorToken(bundleID: identity.bundleID),
           Matcher.normalize(name) == vendor,
-          (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
-          let children = try? fm.contentsOfDirectory(
-            at: entry, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]) {
-          for child in children {
+          (try? entry.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+          for child in entries(at: entry, onError: onError) {
             let childName = child.lastPathComponent
             guard
               let confidence = Matcher.matchVendorChild(
@@ -102,6 +93,22 @@ public struct LeftoverScanner: Sendable {
     return items.sorted { lhs, rhs in
       if lhs.confidence != rhs.confidence { return lhs.confidence > rhs.confidence }
       return lhs.url.path < rhs.url.path
+    }
+  }
+
+  /// An absent search root is normal; an unreadable one makes the scan partial.
+  private func entries(
+    at url: URL, missingIsEmpty: Bool = false, onError: ((URL, Error) -> Void)?
+  ) -> [URL] {
+    do {
+      return try FileManager.default.contentsOfDirectory(
+        at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles])
+    } catch {
+      let code = (error as? CocoaError)?.code
+      if !missingIsEmpty || (code != .fileReadNoSuchFile && code != .fileNoSuchFile) {
+        onError?(url, error)
+      }
+      return []
     }
   }
 
